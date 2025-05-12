@@ -1,2 +1,3 @@
-fastapi[standard]==0.115.12
-yt-dlp[default]==2025.4.30
+fastapi[standard]>=0.115.12
+openai-whisper>=20240930
+yt-dlp[default]>=2025.4.30
