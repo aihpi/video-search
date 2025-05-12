@@ -8,7 +8,6 @@ from typing import Dict
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-TEMP_DIR = os.getenv("TMPDIR", "/tmp")
 MODEL_CACHE: Dict[str, whisper.Whisper] = {}
 
 def get_model(model_name: str) -> str:
@@ -65,14 +64,10 @@ def download_video(video_url: str, output_path: str) -> None:
         raise RuntimeError(f"Failed to download video: {e}")
     
 
-def process_video_sync(video_url: str, id: str, model_name: str, language: str) -> Dict:
+def process_video_sync(video_url: str, video_path: str, audio_path:str, model_name: str, language: str) -> Dict:
     """
     Synchronous function for processing a video to be run in the thread pool.
     """
-
-    os.makedirs(TEMP_DIR, exist_ok=True)
-    video_path = os.path.join(TEMP_DIR, f"{id}.mp4")
-    audio_path = os.path.join(TEMP_DIR, f"{id}.mp3")
 
     try:
         is_video_downloaded = download_video(video_url, video_path)
@@ -92,7 +87,7 @@ def process_video_sync(video_url: str, id: str, model_name: str, language: str) 
 
         transcription_result = transcribe_audio(audio_path, model_name, language)
 
-        logger.info(f"Transcribed video {id} successfully.")
+        logger.info(f"Transcribed video successfully.")
 
         return transcription_result
     

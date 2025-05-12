@@ -1,18 +1,21 @@
-from fastapi import APIRouter, BackgroundTasks, HTTPException
+from fastapi import APIRouter, BackgroundTasks, HTTPException, status
+from fastapi.responses import FileResponse
 from uuid import uuid4
 from typing import Dict
 import logging
 import os
 import asyncio
 
-from .schema import TranscriptionRequest, TranscriptionResponse, TranscriptSegment
-from .service import process_video_sync, cleanup_file
+from app.models.transcription import TranscriptionRequest, TranscriptionResponse, TranscriptSegment
+from app.services.transcription import process_video_sync, cleanup_file
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 cleanup_tasks: Dict[str, asyncio.Task] = {}
 router = APIRouter()
+
+TEMP_DIR = os.getenv("TMPDIR", "/tmp")
 
 @router.post("/transcribe-video", response_model=TranscriptionResponse)
 async def transcribe_video(request: TranscriptionRequest, background_tasks: BackgroundTasks):
@@ -27,8 +30,10 @@ async def transcribe_video(request: TranscriptionRequest, background_tasks: Back
     logger.info(f"Received request: {request}")
 
     id = str(uuid4())
-    audio_path = os.path.join("audio", f"{id}.mp3")
-    
+    os.makedirs(TEMP_DIR, exist_ok=True)
+    video_path = os.path.join(TEMP_DIR, f"{id}.mp4")
+    audio_path = os.path.join(TEMP_DIR, f"{id}.mp3")   
+
     try:
         logger.info(f"Processing video from URL: {request.video_url}")
 
@@ -36,7 +41,8 @@ async def transcribe_video(request: TranscriptionRequest, background_tasks: Back
             None,
             process_video_sync,
             str(request.video_url),
-            id,
+            video_path,
+            audio_path,
             request.model,
             request.language
         )
@@ -62,3 +68,17 @@ async def transcribe_video(request: TranscriptionRequest, background_tasks: Back
     except Exception as e:
         logger.error(f"Error processing video: {e}")
         raise HTTPException(status_code=500, detail="Internal Server Error")
+    
+@router.get("/audio/{filename}")
+async def get_audio(filename: str):
+    """
+    Serves an audio file.
+    """
+    audio_path = os.path.join(TEMP_DIR, filename)
+    
+    if not os.path.exists(audio_path):
+        logger.warning(f"Audio file not found: {audio_path}")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Audio file not found")
+    
+    logger.info(f"Serving audio file: {audio_path}")
+    return FileResponse(audio_path)
