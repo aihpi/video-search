@@ -6,8 +6,8 @@ import logging
 import os
 import asyncio
 
-from .schema import TranscriptionRequest, TranscriptionResponse, TranscriptSegment
-from .service import process_video_sync, cleanup_file
+from app.models.transcription import TranscriptionRequest, TranscriptionResponse, TranscriptSegment
+from app.services.transcription import process_video_sync, cleanup_file
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
