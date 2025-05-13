@@ -5,17 +5,18 @@ import asyncio
 import whisper
 from typing import Dict
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
 logger = logging.getLogger(__name__)
 
-MODEL_CACHE: Dict[str, whisper.Whisper] = {}
+model_cache: Dict[str, whisper.Whisper] = {}
+DEFAULT_MODEL = "tiny"
 
-def get_model(model_name: str) -> str:
+def get_model(model_name: str = DEFAULT_MODEL) -> whisper.Whisper:
     try:
-        if model_name not in MODEL_CACHE:
+        if model_name not in model_cache:
             logger.info(f"Model not found in cache. Loading Whisper {model_name} model.")
-            MODEL_CACHE[model_name] = whisper.load_model(model_name)
-        return MODEL_CACHE[model_name]
+            model_cache[model_name] = whisper.load_model(model_name)
+        return model_cache[model_name]
     except Exception as e:
         logger.error(f"Error loading model: {e}")
         raise RuntimeError(f"Model loading failed: {e}")

@@ -9,7 +9,7 @@ import asyncio
 from app.models.transcription import TranscriptionRequest, TranscriptionResponse, TranscriptSegment
 from app.services.transcription import process_video_sync, cleanup_file
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
 logger = logging.getLogger(__name__)
 
 cleanup_tasks: Dict[str, asyncio.Task] = {}
