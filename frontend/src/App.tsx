@@ -1,47 +1,60 @@
-import { useState } from "react";
-import reactLogo from "./assets/react.svg";
-import viteLogo from "/vite.svg";
+import React, { useState } from "react";
 import "./App.css";
+import TranscriptionForm from "./components/TranscriptionForm";
+import TranscriptionResult from "./components/TranscriptionResult";
+import type { TranscriptionResponse } from "./types/api.types";
 
-function App() {
-  const [count, setCount] = useState(0);
+const App: React.FC = () => {
+  const [transcriptionResult, setTranscriptionResult] =
+    useState<TranscriptionResponse | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleTranscriptionComplete = (result: TranscriptionResponse) => {
+    setTranscriptionResult(result);
+    setError(null);
+  };
+
+  const handleError = (error: Error) => {
+    setError(error.message);
+    setTranscriptionResult(null);
+  };
+
+  const handleNewTranscription = () => {
+    setTranscriptionResult(null);
+    setError(null);
+  };
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
+    <div className="min-h-screen bg-gray-100 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-3xl mx-auto">
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-extrabold text-gray-900">
+            Video Transcription Service
+          </h1>
+          <p className="mt-2 text-gray-600">
+            Enter a YouTube URL to transcribe the video using OpenAI's Whisper
+            model
+          </p>
+        </div>
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md mb-6">
+            <p className="font-medium">Error: {error}</p>
+          </div>
+        )}
+        {!transcriptionResult ? (
+          <TranscriptionForm
+            onTranscriptionComplete={handleTranscriptionComplete}
+            onError={handleError}
+          />
+        ) : (
+          <TranscriptionResult
+            result={transcriptionResult}
+            onNewTranscription={handleNewTranscription}
+          />
+        )}
       </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100">
-        <h1 className="text-3xl font-bold">Hello, Tailwind CSS!</h1>
-        <p className="mt-4 text-lg">
-          This is a simple example of using Tailwind CSS with Vite and React.
-        </p>
-        <button className="mt-6 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
-          Click Me
-        </button>
-        <p className="mt-4 text-sm text-gray-500">
-          This is a simple button styled with Tailwind CSS.
-        </p>
-      </div>
-    </>
+    </div>
   );
-}
+};
 
 export default App;
