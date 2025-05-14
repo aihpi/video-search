@@ -1,1 +1,6 @@
+scipy
+IPython
+numpy
 librosa
+matplotlib
+torchaudio
