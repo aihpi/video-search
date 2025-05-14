@@ -17,13 +17,15 @@ const apiClient = axios.create({
 
 export const transcribeVideo = async (
   videoUrl: string,
-  language?: string,
-  model?: WhisperModelType
+  model?: WhisperModelType,
+  language?: string
 ): Promise<TranscriptionResponse> => {
+  // Convert empty string to null for language
+  // This ensures FastAPI/Pydantic properly recognizes it as Optional[str]
   const requestBody: TranscriptionRequest = {
     videoUrl,
-    language,
     model,
+    language: language === "" ? null : language,
   };
 
   try {

@@ -14,7 +14,11 @@ const App: React.FC = () => {
     setError(null);
   };
 
-  const handleError = (error: Error) => {
+  const handleError = (error: Error | null) => {
+    if (!error) {
+      setError(null);
+      return;
+    }
     setError(error.message);
     setTranscriptionResult(null);
   };
@@ -36,11 +40,13 @@ const App: React.FC = () => {
             model
           </p>
         </div>
-        {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md mb-6">
-            <p className="font-medium">Error: {error}</p>
-          </div>
-        )}
+        <div className="h-14 mb-6">
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md">
+              <p className="font-medium">Error: {error}</p>
+            </div>
+          )}
+        </div>
         {!transcriptionResult ? (
           <TranscriptionForm
             onTranscriptionComplete={handleTranscriptionComplete}
