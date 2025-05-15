@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 import uvicorn
 
-from app.api.routes import router
+from app.api.routes import router, executor
 from app.services.transcription import get_model, model_cache
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
@@ -24,9 +24,14 @@ async def lifespan(app: FastAPI):
         raise RuntimeError(f"Model loading failed: {e}")
     
     yield
+    
     # Cleanup
+    logger.info("Shutting down thread pool executor...")
+    executor.shutdown(wait=True)
+    
     logger.info("Unloading models...")
     model_cache.clear()
+    
     logger.info("Shutting down...")
 
 app = FastAPI(

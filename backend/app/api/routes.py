@@ -1,3 +1,4 @@
+from concurrent.futures import ThreadPoolExecutor
 from fastapi import APIRouter, BackgroundTasks, HTTPException, status
 from fastapi.responses import FileResponse
 from uuid import uuid4
@@ -20,6 +21,9 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+# Thread pool for CPU-bound operations
+executor = ThreadPoolExecutor(max_workers=4)
 
 TEMP_DIR = os.getenv("TMPDIR", "/tmp")
 
@@ -47,7 +51,7 @@ async def transcribe_video(
         logger.info(f"Processing video from URL: {request.video_url}")
 
         result = await asyncio.get_event_loop().run_in_executor(
-            None,
+            executor,
             process_video_sync,
             str(request.video_url),
             video_path,
@@ -55,6 +59,11 @@ async def transcribe_video(
             request.model,
             request.language,
         )
+
+        # Clean up the video file immediately as it's no longer needed
+        if os.path.exists(video_path):
+            os.remove(video_path)
+            logger.info(f"Deleted video file: {video_path}")
 
         # Add a background task to clean up the audio file after a delay of 1 hour
         background_tasks.add_task(cleanup_file, audio_path)
