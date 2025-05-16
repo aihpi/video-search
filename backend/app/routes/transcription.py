@@ -7,11 +7,13 @@ import os
 import asyncio
 
 from app.models.transcription import (
+    Transcript,
     TranscriptionRequest,
     TranscriptionResponse,
     TranscriptSegment,
 )
 from app.services.transcription import process_video_sync, cleanup_file
+from app.services.question_answering import question_answering_service
 
 logging.basicConfig(
     level=logging.INFO,
@@ -20,7 +22,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-router = APIRouter()
+transcription_router = APIRouter()
 
 # Thread pool for CPU-bound operations
 executor = ThreadPoolExecutor(max_workers=4)
@@ -28,7 +30,7 @@ executor = ThreadPoolExecutor(max_workers=4)
 TEMP_DIR = os.getenv("TMPDIR", "/tmp")
 
 
-@router.post("/transcribe-video", response_model=TranscriptionResponse)
+@transcription_router.post("/transcribe-video", response_model=TranscriptionResponse)
 async def transcribe_video(
     request: TranscriptionRequest, background_tasks: BackgroundTasks
 ):
@@ -68,25 +70,33 @@ async def transcribe_video(
         # Add a background task to clean up the audio file after a delay of 1 hour
         background_tasks.add_task(cleanup_file, audio_path)
 
+        transcript_text = result["text"]
+        segments = [
+            TranscriptSegment(
+                id=i, start=seg["start"], end=seg["end"], text=seg["text"]
+            )
+            for i, seg in enumerate(result["segments"])
+        ]
+
+        question_answering_service.index_transcript(
+            Transcript(id=id, text=transcript_text, segments=segments)
+        )
+
         response = TranscriptionResponse(
             id=id,
             audio_url=f"/audio/{id}.mp3",
             language=result["language"],
-            text=result["text"],
-            segments=[
-                TranscriptSegment(
-                    id=i, start=seg["start"], end=seg["end"], text=seg["text"]
-                )
-                for i, seg in enumerate(result["segments"])
-            ],
+            text=transcript_text,
+            segments=segments,
         )
+
         return response
     except Exception as e:
         logger.error(f"Error processing video: {e}")
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
 
-@router.get("/audio/{filename}")
+@transcription_router.get("/audio/{filename}")
 async def get_audio(filename: str):
     """
     Serves an audio file.
