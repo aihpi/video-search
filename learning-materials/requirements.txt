@@ -3,4 +3,4 @@ IPython
 numpy
 librosa
 matplotlib
-torchaudio
+pyqtgraph
