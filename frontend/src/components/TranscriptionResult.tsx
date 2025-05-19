@@ -3,15 +3,18 @@ import type {
   TranscriptionResponse,
   TranscriptSegment,
 } from "../types/api.types";
+import QuestionAnswering from "./QuestionAnswering";
 
 interface TranscriptionResultProps {
   result: TranscriptionResponse;
   onNewTranscription: () => void;
+  onSeekToTime?: (seconds: number) => void;
 }
 
 const TranscriptionResult: React.FC<TranscriptionResultProps> = ({
   result,
   onNewTranscription,
+  onSeekToTime,
 }) => {
   const [activeSegment, setActiveSegment] = useState<number | null>(null);
 
@@ -49,18 +52,6 @@ const TranscriptionResult: React.FC<TranscriptionResultProps> = ({
         </div>
       </div>
 
-      {/* Audio Player */}
-      <div className="bg-gray-50 p-4 rounded-md">
-        <h3 className="text-sm font-medium text-gray-700 mb-2">Audio</h3>
-        <audio
-          controls
-          className="w-full"
-          src={`http://localhost:9091${result.audio_url}`}
-        >
-          Your browser does not support the audio element.
-        </audio>
-      </div>
-
       {/* Full Transcription */}
       <div>
         <h3 className="text-sm font-medium text-gray-700 mb-2">
@@ -96,6 +87,9 @@ const TranscriptionResult: React.FC<TranscriptionResultProps> = ({
           ))}
         </div>
       </div>
+
+      {/* Question Answering Section */}
+      <QuestionAnswering transcriptId={result.id} onSeekToTime={onSeekToTime} />
     </div>
   );
 };

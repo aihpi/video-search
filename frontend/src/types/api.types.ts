@@ -8,7 +8,7 @@ export type WhisperModelType =
 
 export type TranscriptionRequest = {
   videoUrl: string;
-  language?: string;
+  language?: string | null;
   model?: WhisperModelType;
 };
 
@@ -25,4 +25,24 @@ export type TranscriptionResponse = {
   language: string;
   text: string;
   segments: TranscriptSegment[];
+};
+
+export type QueryResult = {
+  segmentId: number;
+  startTime: number;
+  endTime: number;
+  text: string;
+  transcriptId: string;
+};
+
+export type QuestionRequest = {
+  question: string;
+  transcriptId: string;
+  topK?: number;
+};
+
+export type QuestionResponse = {
+  question: string;
+  transcriptId: string;
+  results: QueryResult[];
 };

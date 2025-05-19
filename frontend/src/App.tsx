@@ -1,6 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import "./App.css";
-import TranscriptionForm from "./components/TranscriptionForm";
+import TranscriptionForm, {
+  type TranscriptionFormHandle,
+} from "./components/TranscriptionForm";
 import TranscriptionResult from "./components/TranscriptionResult";
 import type { TranscriptionResponse } from "./types/api.types";
 
@@ -8,6 +10,7 @@ const App: React.FC = () => {
   const [transcriptionResult, setTranscriptionResult] =
     useState<TranscriptionResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const transcriptionFormRef = useRef<TranscriptionFormHandle>(null);
 
   const handleTranscriptionComplete = (result: TranscriptionResponse) => {
     setTranscriptionResult(result);
@@ -26,6 +29,12 @@ const App: React.FC = () => {
   const handleNewTranscription = () => {
     setTranscriptionResult(null);
     setError(null);
+  };
+
+  const handleSeekToTime = (seconds: number) => {
+    if (transcriptionFormRef.current) {
+      transcriptionFormRef.current.seekToTime(seconds);
+    }
   };
 
   return (
@@ -47,15 +56,16 @@ const App: React.FC = () => {
             </div>
           )}
         </div>
-        {!transcriptionResult ? (
-          <TranscriptionForm
-            onTranscriptionComplete={handleTranscriptionComplete}
-            onError={handleError}
-          />
-        ) : (
+        <TranscriptionForm
+          ref={transcriptionFormRef}
+          onTranscriptionComplete={handleTranscriptionComplete}
+          onError={handleError}
+        />
+        {transcriptionResult && (
           <TranscriptionResult
             result={transcriptionResult}
             onNewTranscription={handleNewTranscription}
+            onSeekToTime={handleSeekToTime}
           />
         )}
       </div>

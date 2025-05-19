@@ -1,8 +1,8 @@
 import chromadb
 import logging
 import os
-from sentence_transformers import SentenceTransformer
 from typing import List, Optional
+from chromadb.utils.embedding_functions import SentenceTransformerEmbeddingFunction
 
 from app.models.transcription import Transcript
 from app.models.question_answering import QueryResult
@@ -24,7 +24,6 @@ COLLECTION_NAME = os.getenv("COLLECTION_NAME", "transcript_embeddings")
 
 class QuestionAnsweringService:
     _instance = None
-    _model = None
     _db = None
     _collection = None
 
@@ -37,23 +36,29 @@ class QuestionAnsweringService:
 
     @classmethod
     def _initialize_service(cls):
-        """Initialize the embedding model and vector database."""
-        logger.info(f"Initializing EmbeddingService with {EMBEDDING_MODEL_NAME} model.")
+        """Initialize the vector database with a custom embedding function."""
+        logger.info(f"Initializing Question Answering Service.")
         try:
-            cls._model = SentenceTransformer(EMBEDDING_MODEL_NAME)
             cls._db = chromadb.PersistentClient(path=CHROMA_DB_DIR)
+
+            # Create embedding function compatible with Chroma
+            embedding_function = SentenceTransformerEmbeddingFunction(
+                model_name=EMBEDDING_MODEL_NAME
+            )
+
             cls._collection = cls._db.get_or_create_collection(
                 name=COLLECTION_NAME,
                 metadata={"hnsw:space": "cosine"},  # Use cosine similarity
+                embedding_function=embedding_function,  # Use our model for storing and querying data
             )
 
-            logger.info("EmbeddingService initialized successfully.")
+            logger.info("Question Answering Service initialized successfully.")
 
             logger.info(
                 f"Model: {EMBEDDING_MODEL_NAME}, Database Path: {CHROMA_DB_DIR}, Collection: {COLLECTION_NAME}"
             )
         except Exception as e:
-            logger.error(f"Failed to initialize EmbeddingService: {e}")
+            logger.error(f"Failed to initialize Question Answering Service: {e}")
             raise
 
     def index_transcript(self, transcript: Transcript):
@@ -78,7 +83,9 @@ class QuestionAnsweringService:
                 }
                 for segment in transcript.segments
             ]
-            ids = [str(segment.id) for segment in transcript.segments]
+            ids = [
+                f"{transcript.id}_{str(segment.id)}" for segment in transcript.segments
+            ]
 
             self._collection.add(documents=documents, metadatas=metadatas, ids=ids)
             logger.info(
@@ -98,14 +105,17 @@ class QuestionAnsweringService:
             # Restrict results to a specific transcript if transcript_id is provided
             where_filter = {"transcript_id": transcript_id} if transcript_id else None
 
+            logger.info(f"Transcript id in where filter: {transcript_id}")
+
             results = self._collection.query(
                 query_texts=[question], n_results=top_k, where=where_filter
             )
-
+            logger.info(f"Query results: {results}")
             documents = (
                 results["documents"][0] if results and results["documents"] else []
             )
 
+            logger.info(f"Documents found: {documents}")
             if not documents:
                 logger.warning(f"No results found for question: {question}")
                 return []

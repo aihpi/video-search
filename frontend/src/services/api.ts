@@ -4,6 +4,8 @@ import type {
   TranscriptionRequest,
   TranscriptionResponse,
   WhisperModelType,
+  QuestionRequest,
+  QuestionResponse,
 } from "../types/api.types";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:9091";
@@ -36,6 +38,29 @@ export const transcribeVideo = async (
     return response.data;
   } catch (error) {
     console.error("Error during transcription:", error);
+    throw error;
+  }
+};
+
+export const queryTranscript = async (
+  question: string,
+  transcriptId: string,
+  topK: number = 5
+): Promise<QuestionResponse> => {
+  const requestBody: QuestionRequest = {
+    question,
+    transcriptId,
+    topK,
+  };
+
+  try {
+    const response = await apiClient.post<QuestionResponse>(
+      "/question",
+      requestBody
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Error during query:", error);
     throw error;
   }
 };

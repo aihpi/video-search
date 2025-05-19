@@ -1,25 +1,44 @@
-import React, { useState, useEffect } from "react";
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useImperativeHandle,
+  forwardRef,
+} from "react";
 import type {
   WhisperModelType,
   TranscriptionResponse,
 } from "../types/api.types";
 import { transcribeVideo } from "../services/api";
-import YouTubePlayer from "./YouTubePlayer";
+import YouTubePlayer, { type YouTubePlayerHandle } from "./YouTubePlayer";
 
 interface TranscriptionFormProps {
   onTranscriptionComplete: (result: TranscriptionResponse) => void;
   onError: (error: Error | null) => void;
 }
 
-const TranscriptionForm: React.FC<TranscriptionFormProps> = ({
-  onTranscriptionComplete,
-  onError,
-}) => {
+export interface TranscriptionFormHandle {
+  seekToTime: (seconds: number) => void;
+}
+
+const TranscriptionForm = forwardRef<
+  TranscriptionFormHandle,
+  TranscriptionFormProps
+>(({ onTranscriptionComplete, onError }, ref) => {
   const [videoUrl, setVideoUrl] = useState("");
   const [videoId, setVideoId] = useState<string | null>(null);
   const [language, setLanguage] = useState<string>("");
   const [model, setModel] = useState<WhisperModelType>("tiny");
   const [isLoading, setIsLoading] = useState(false);
+  const youtubePlayerRef = useRef<YouTubePlayerHandle>(null);
+
+  useImperativeHandle(ref, () => ({
+    seekToTime: (seconds: number) => {
+      if (youtubePlayerRef.current) {
+        youtubePlayerRef.current.seekTo(seconds);
+      }
+    },
+  }));
 
   // Extract YouTube video ID from various URL formats
   const extractVideoId = (url: string): string | null => {
@@ -104,7 +123,7 @@ const TranscriptionForm: React.FC<TranscriptionFormProps> = ({
       >
         {videoId ? (
           <div className="p-4">
-            <YouTubePlayer videoId={videoId} />
+            <YouTubePlayer ref={youtubePlayerRef} videoId={videoId} />
           </div>
         ) : videoUrl ? (
           <div className="p-4 flex items-center justify-center h-full">
@@ -201,6 +220,8 @@ const TranscriptionForm: React.FC<TranscriptionFormProps> = ({
       </div>
     </form>
   );
-};
+});
+
+TranscriptionForm.displayName = "TranscriptionForm";
 
 export default TranscriptionForm;
