@@ -4,7 +4,7 @@ from app.models.camel_case import CamelCaseModel
 
 
 class QueryResult(CamelCaseModel):
-    segment_id: int
+    segment_id: str
     start_time: float
     end_time: float
     text: str

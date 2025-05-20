@@ -12,7 +12,7 @@ class TranscriptionRequest(CamelCaseModel):
 
 
 class TranscriptSegment(CamelCaseModel):
-    id: int
+    id: str
     start: float
     end: float
     text: str

@@ -26,11 +26,6 @@ const App: React.FC = () => {
     setTranscriptionResult(null);
   };
 
-  const handleNewTranscription = () => {
-    setTranscriptionResult(null);
-    setError(null);
-  };
-
   const handleSeekToTime = (seconds: number) => {
     if (transcriptionFormRef.current) {
       transcriptionFormRef.current.seekToTime(seconds);
@@ -63,8 +58,7 @@ const App: React.FC = () => {
         />
         {transcriptionResult && (
           <TranscriptionResult
-            result={transcriptionResult}
-            onNewTranscription={handleNewTranscription}
+            transcriptionResponse={transcriptionResult}
             onSeekToTime={handleSeekToTime}
           />
         )}

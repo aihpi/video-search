@@ -13,7 +13,7 @@ export type TranscriptionRequest = {
 };
 
 export type TranscriptSegment = {
-  id: number;
+  id: string;
   start: number;
   end: number;
   text: string;
@@ -28,7 +28,7 @@ export type TranscriptionResponse = {
 };
 
 export type QueryResult = {
-  segmentId: number;
+  segmentId: string;
   startTime: number;
   endTime: number;
   text: string;

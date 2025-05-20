@@ -79,13 +79,11 @@ class QuestionAnsweringService:
                     "transcript_id": transcript.id,
                     "start_time": segment.start,
                     "end_time": segment.end,
-                    "id": str(segment.id),
+                    "id": segment.id,
                 }
                 for segment in transcript.segments
             ]
-            ids = [
-                f"{transcript.id}_{str(segment.id)}" for segment in transcript.segments
-            ]
+            ids = [segment.id for segment in transcript.segments]
 
             self._collection.add(documents=documents, metadatas=metadatas, ids=ids)
             logger.info(

@@ -73,7 +73,7 @@ async def transcribe_video(
         transcript_text = result["text"]
         segments = [
             TranscriptSegment(
-                id=i, start=seg["start"], end=seg["end"], text=seg["text"]
+                id=f"{id}_{i}", start=seg["start"], end=seg["end"], text=seg["text"]
             )
             for i, seg in enumerate(result["segments"])
         ]
