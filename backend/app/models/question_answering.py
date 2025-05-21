@@ -9,6 +9,7 @@ class QueryResult(CamelCaseModel):
     end_time: float
     text: str
     transcript_id: str
+    relevance_score: float
 
 
 class QuestionResponse(CamelCaseModel):

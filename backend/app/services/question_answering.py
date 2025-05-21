@@ -118,6 +118,8 @@ class QuestionAnsweringService:
                 logger.warning(f"No results found for question: {question}")
                 return []
 
+            distances = results["distances"][0]
+
             metadatas = results["metadatas"][0]
 
             logger.info(f"Found {len(documents)} documents for question: {question}")
@@ -129,6 +131,7 @@ class QuestionAnsweringService:
                     end_time=metadatas[i]["end_time"],
                     text=document,
                     transcript_id=metadatas[i]["transcript_id"],
+                    relevance_score=round((1 - distances[i]) * 100, 2),
                 )
                 for i, document in enumerate(documents)
             ]

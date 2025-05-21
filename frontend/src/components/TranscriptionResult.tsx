@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import type {
   TranscriptionResponse,
+  QueryResult,
   TranscriptSegment,
 } from "../types/api.types";
 import { queryTranscript } from "../services/api";
@@ -16,8 +17,17 @@ const TranscriptionResult: React.FC<TranscriptionResultProps> = ({
   onSeekToTime,
 }) => {
   const [question, setQuestion] = useState("");
-  const [filteredSegments, setFilteredSegments] = useState<TranscriptSegment[]>(
-    transcriptionResponse.segments
+  const [segmentResults, setSegmentResults] = useState<QueryResult[]>(
+    transcriptionResponse.segments.map((segment) => {
+      return {
+        startTime: segment.start,
+        endTime: segment.end,
+        text: segment.text,
+        segmentId: segment.id,
+        transcriptId: transcriptionResponse.id,
+        relevanceScore: null,
+      } as QueryResult;
+    })
   );
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -29,6 +39,19 @@ const TranscriptionResult: React.FC<TranscriptionResultProps> = ({
     return `${minutes}:${remainingSeconds < 10 ? "0" : ""}${remainingSeconds}`;
   };
 
+  const segmentsToQueryResults = (segments: TranscriptSegment[]) => {
+    return segments.map((segment) => {
+      return {
+        startTime: segment.start,
+        endTime: segment.end,
+        text: segment.text,
+        segmentId: segment.id,
+        transcriptId: transcriptionResponse.id,
+        relevanceScore: null,
+      } as QueryResult;
+    });
+  };
+
   const handleQueryTranscript = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!question.trim()) return;
@@ -37,36 +60,32 @@ const TranscriptionResult: React.FC<TranscriptionResultProps> = ({
     setError(null);
 
     console.log("Question:", question);
-    console.log("Transcript ID:", transcriptionResponse.id);
     try {
       const response = await queryTranscript(
         question,
         transcriptionResponse.id
       );
-      setFilteredSegments(
-        transcriptionResponse.segments.filter((segment) =>
-          response.results.some((result) => result.segmentId === segment.id)
-        )
-      );
+      console.log("Query response:", response);
+      setSegmentResults(response.results);
       setActiveSegment(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
-      setFilteredSegments([]);
+      setSegmentResults([]);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleResultClick = (segment: TranscriptSegment) => {
+  const handleResultClick = (segment: QueryResult) => {
     if (onSeekToTime) {
-      onSeekToTime(segment.start);
+      onSeekToTime(segment.startTime);
     }
-    setActiveSegment(segment.id);
+    setActiveSegment(segment.segmentId);
   };
 
   const handleClearSearch = () => {
     setQuestion("");
-    setFilteredSegments(transcriptionResponse.segments);
+    setSegmentResults(segmentsToQueryResults(transcriptionResponse.segments));
     setActiveSegment(null);
     setError(null);
   };
@@ -126,35 +145,42 @@ const TranscriptionResult: React.FC<TranscriptionResultProps> = ({
       {/* Segments */}
       <div>
         <div className="bg-gray-50 p-4 rounded-md space-y-2 max-h-96 overflow-y-auto">
-          {filteredSegments.length > 0 &&
-            filteredSegments.map((segment: TranscriptSegment) => (
+          {segmentResults.length > 0 &&
+            segmentResults.map((result: QueryResult) => (
               <div
-                key={segment.id}
+                key={result.segmentId}
                 className={`p-3 rounded-md cursor-pointer ${
-                  activeSegment === segment.id
+                  activeSegment === result.segmentId
                     ? "bg-indigo-50 border border-indigo-200"
                     : "bg-white border border-gray-200"
                 }`}
-                onClick={() => handleResultClick(segment)}
+                onClick={() => handleResultClick(result)}
               >
                 <div className="flex justify-between text-sm text-gray-500 mb-1">
                   <span>
-                    {formatTime(segment.start)} - {formatTime(segment.end)}
+                    {formatTime(result.startTime)} -{" "}
+                    {formatTime(result.endTime)}
                   </span>
-                  <span>{Math.round(segment.end - segment.start)}s</span>
+                  <span
+                    className="px-2 py-1 rounded-md text-xs font-medium"
+                    style={{
+                      backgroundColor: result.relevanceScore
+                        ? `rgba(79, 70, 229, ${result.relevanceScore / 100})`
+                        : "transparent",
+                    }}
+                  >
+                    {result.relevanceScore ? `${result.relevanceScore}%` : " "}
+                  </span>
                 </div>
-                <p className="text-gray-800">{segment.text}</p>
+                <p className="text-gray-800">{result.text}</p>
               </div>
             ))}
 
-          {filteredSegments.length === 0 &&
-            !isLoading &&
-            !error &&
-            question && (
-              <p className="text-sm text-gray-500">
-                No relevant segments found for your question.
-              </p>
-            )}
+          {segmentResults.length === 0 && !isLoading && !error && question && (
+            <p className="text-sm text-gray-500">
+              No relevant segments found for your question.
+            </p>
+          )}
         </div>
       </div>
     </div>

@@ -33,6 +33,7 @@ export type QueryResult = {
   endTime: number;
   text: string;
   transcriptId: string;
+  relevanceScore: number | null;
 };
 
 export type QuestionRequest = {
