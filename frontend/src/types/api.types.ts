@@ -6,6 +6,13 @@ export type WhisperModelType =
   | "large"
   | "turbo";
 
+export type SearchType = "keyword" | "semantic";
+
+export const SearchTypeNames: Record<SearchType, string> = {
+  keyword: "Keyword Search",
+  semantic: "Semantic Search",
+};
+
 export type TranscriptionRequest = {
   videoUrl: string;
   language?: string | null;
@@ -40,10 +47,12 @@ export type QuestionRequest = {
   question: string;
   transcriptId: string;
   topK?: number;
+  searchType?: SearchType;
 };
 
 export type QuestionResponse = {
   question: string;
   transcriptId: string;
   results: QueryResult[];
+  searchType: SearchType;
 };

@@ -94,35 +94,100 @@ class QuestionAnsweringService:
             raise
 
     def query_transcript(
+        self,
+        question: str,
+        transcript_id: Optional[str],
+        top_k: Optional[int] = 5,
+        search_type: Optional[str] = "keyword",
+    ) -> List[QueryResult]:
+        logger.info(
+            f"Querying transcript with {search_type} search for question: {question}"
+        )
+
+        if search_type == "keyword":
+            return self._keyword_search(question, transcript_id)
+        elif search_type == "semantic":
+            return self._semantic_search(question, transcript_id, top_k)
+        else:
+            logger.warning(
+                f"Unsupported search type: {search_type}. Defaulting to keyword search."
+            )
+            return self._keyword_search(question, transcript_id, top_k)
+
+    def _keyword_search(
+        self, question: str, transcript_id: Optional[str]
+    ) -> List[QueryResult]:
+        """Perform a keyword search on transcript segments."""
+
+        try:
+            logger.info(f"Performing keyword search for question: {question}")
+
+            # Get all segments for the transcript
+            where_filter = {"transcript_id": transcript_id} if transcript_id else None
+
+            results = self._collection.get(where=where_filter)
+
+            if not results or not results["documents"]:
+                logger.warning(f"No segments found for transcript ID: {transcript_id}")
+                return []
+
+            documents = results["documents"]
+            metadatas = results["metadatas"]
+
+            # Filter documents based on keyword match
+            filtered_documents = [
+                doc for doc in documents if question.lower() in doc.lower()
+            ]
+
+            if not filtered_documents:
+                logger.warning(f"No keyword matches found for question: {question}")
+                return []
+
+            query_results = [
+                QueryResult(
+                    segment_id=metadatas[i]["id"],
+                    start_time=metadatas[i]["start_time"],
+                    end_time=metadatas[i]["end_time"],
+                    text=document,
+                    transcript_id=metadatas[i]["transcript_id"],
+                    relevance_score=None,
+                )
+                for i, document in enumerate(filtered_documents)
+            ]
+
+            logger.info(
+                f"Found {len(query_results)} keyword matches for question: {question}"
+            )
+            return query_results
+        except Exception as e:
+            logger.error(f"Failed to perform keyword search: {e}")
+            raise
+
+    def _semantic_search(
         self, question: str, transcript_id: Optional[str], top_k: Optional[int] = 5
     ) -> List[QueryResult]:
-        """Query the vector database with a question to find relevant transcript segments."""
+        """Perform a semantic search on the vector database using embeddings."""
+
         try:
-            logger.info(f"Querying for segments related to question: {question}")
+            logger.info(f"Performing semantic search for question: {question}")
 
             # Restrict results to a specific transcript if transcript_id is provided
             where_filter = {"transcript_id": transcript_id} if transcript_id else None
 
-            logger.info(f"Transcript id in where filter: {transcript_id}")
-
             results = self._collection.query(
                 query_texts=[question], n_results=top_k, where=where_filter
             )
-            logger.info(f"Query results: {results}")
             documents = (
                 results["documents"][0] if results and results["documents"] else []
             )
 
-            logger.info(f"Documents found: {documents}")
             if not documents:
-                logger.warning(f"No results found for question: {question}")
+                logger.warning(f"No semantic matches found for question: {question}")
                 return []
 
             distances = results["distances"][0]
 
             metadatas = results["metadatas"][0]
-
-            logger.info(f"Found {len(documents)} documents for question: {question}")
 
             query_results = [
                 QueryResult(
@@ -136,11 +201,13 @@ class QuestionAnsweringService:
                 for i, document in enumerate(documents)
             ]
 
-            logger.info(f"Found {len(query_results)} segments for question: {question}")
+            logger.info(
+                f"Found {len(query_results)} semantic matches for question: {question}"
+            )
 
             return query_results
         except Exception as e:
-            logger.error(f"Failed to query transcript segments: {e}")
+            logger.error(f"Failed to perform semantic search: {e}")
             raise
 
 

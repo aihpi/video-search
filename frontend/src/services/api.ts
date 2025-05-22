@@ -6,6 +6,7 @@ import type {
   WhisperModelType,
   QuestionRequest,
   QuestionResponse,
+  SearchType,
 } from "../types/api.types";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:9091";
@@ -45,12 +46,14 @@ export const transcribeVideo = async (
 export const queryTranscript = async (
   question: string,
   transcriptId: string,
-  topK: number = 5
+  topK: number = 5,
+  searchType: SearchType = "keyword"
 ): Promise<QuestionResponse> => {
   const requestBody: QuestionRequest = {
     question,
     transcriptId,
     topK,
+    searchType,
   };
 
   try {
