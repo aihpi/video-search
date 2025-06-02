@@ -5,7 +5,7 @@ from typing import List, Optional
 from chromadb.utils.embedding_functions import SentenceTransformerEmbeddingFunction
 
 from app.models.transcription import Transcript
-from app.models.question_answering import QueryResult
+from app.models.question_answering import QueryResult, SearchType
 
 logging.basicConfig(
     level=logging.INFO,
@@ -98,16 +98,18 @@ class QuestionAnsweringService:
         question: str,
         transcript_id: Optional[str],
         top_k: Optional[int] = 5,
-        search_type: Optional[str] = "keyword",
+        search_type: Optional[SearchType] = SearchType.KEYWORD,
     ) -> List[QueryResult]:
         logger.info(
             f"Querying transcript with {search_type} search for question: {question}"
         )
 
-        if search_type == "keyword":
+        if search_type == SearchType.KEYWORD:
             return self._keyword_search(question, transcript_id)
-        elif search_type == "semantic":
+        elif search_type == SearchType.SEMANTIC:
             return self._semantic_search(question, transcript_id, top_k)
+        elif search_type == SearchType.LLM:
+            return self._llm_search(question, transcript_id, top_k)
         else:
             logger.warning(
                 f"Unsupported search type: {search_type}. Defaulting to keyword search."
@@ -209,6 +211,13 @@ class QuestionAnsweringService:
         except Exception as e:
             logger.error(f"Failed to perform semantic search: {e}")
             raise
+
+    def _llm_search(
+        self, question: str, transcript_id: Optional[str], top_k: Optional[int] = 5
+    ) -> List[QueryResult]:
+        """Use an LLM to synthesize an answer from semantic search results."""
+
+        return []
 
 
 question_answering_service = QuestionAnsweringService()

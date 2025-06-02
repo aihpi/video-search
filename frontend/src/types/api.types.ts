@@ -6,11 +6,12 @@ export type WhisperModelType =
   | "large"
   | "turbo";
 
-export type SearchType = "keyword" | "semantic";
+export type SearchType = "keyword" | "semantic" | "llm";
 
 export const SearchTypeNames: Record<SearchType, string> = {
   keyword: "Keyword Search",
   semantic: "Semantic Search",
+  llm: "LLM Synthesis",
 };
 
 export type TranscriptionRequest = {

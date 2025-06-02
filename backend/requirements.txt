@@ -4,3 +4,5 @@ yt-dlp[default]==2025.4.30
 sentence-transformers==4.1.0
 chromadb==1.0.9
 hf-xet==1.1.1
+accelerate==1.7.0
+bitsandbytes==0.42.0
