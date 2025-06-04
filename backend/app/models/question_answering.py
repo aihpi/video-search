@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 
 from app.models.camel_case import CamelCaseModel
 
@@ -20,15 +20,34 @@ class QueryResult(CamelCaseModel):
     relevance_score: float | None = None
 
 
-class QuestionResponse(CamelCaseModel):
-    question: str
-    transcript_id: str
-    results: List[QueryResult]
-    search_type: str
-
-
 class QuestionRequest(CamelCaseModel):
     question: str
     transcript_id: str
     top_k: Optional[int] = 5
     search_type: Optional[SearchType] = SearchType.KEYWORD
+
+
+class BaseSearchResponse(CamelCaseModel):
+    question: str
+    transcript_id: str
+    results: List[QueryResult]
+    search_type: SearchType
+
+
+class KeywordSearchResponse(BaseSearchResponse):
+    search_type: SearchType = SearchType.KEYWORD
+
+
+class SemanticSearchResponse(BaseSearchResponse):
+    search_type: SearchType = SearchType.SEMANTIC
+
+
+class LLMSearchResponse(BaseSearchResponse):
+    search_type: SearchType = SearchType.LLM
+    summary: str
+    points: List[Dict[str, Any]]
+    not_addressed: bool
+    model_id: str
+
+
+QuestionResponse = KeywordSearchResponse | SemanticSearchResponse | LLMSearchResponse

@@ -1,8 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import List, Optional, Dict, Any
-
-from app.models.camel_case import CamelCaseModel
-from app.models.question_answering import QueryResult
+from typing import List
 
 
 # Schema for structured output for LLM answers
@@ -28,46 +25,6 @@ class Answer(BaseModel):
         ...,
         description="Flag indicating if the question cannot be fully answered from the transcript.",
     )
-
-
-# API Models for model management
-class ModelInfo(CamelCaseModel):
-    id: str
-    name: str
-    description: str
-    requires_gpu: bool
-    is_loaded: bool
-
-
-class ModelListResponse(CamelCaseModel):
-    models: List[ModelInfo]
-    active_model_id: Optional[str] = None
-    has_gpu: bool = False
-
-
-class ModelSelectRequest(CamelCaseModel):
-    model_id: str
-
-
-class ModelSelectResponse(CamelCaseModel):
-    success: bool
-    message: str
-    model_id: Optional[str] = None
-
-
-# API Models for LLM answers
-class LLMAnswerRequest(CamelCaseModel):
-    question: str
-    transcript_id: str
-    top_k: Optional[int] = 5
-    model_id: Optional[str] = None
-
-
-class LLMAnswerResponse(CamelCaseModel):
-    question: str
-    transcript_id: str
-    summary: str
-    points: List[Dict[str, Any]]
-    not_addressed: bool
-    model_id: str
-    supporting_segments: List[QueryResult]
+    model_id: str = Field(
+        ..., description="Identifier for the model used to generate the answer."
+    )

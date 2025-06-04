@@ -1,11 +1,20 @@
 import chromadb
 import logging
 import os
-from typing import List, Optional
+from typing import Optional
 from chromadb.utils.embedding_functions import SentenceTransformerEmbeddingFunction
 
 from app.models.transcription import Transcript
-from app.models.question_answering import QueryResult, SearchType
+from app.models.question_answering import (
+    KeywordSearchResponse,
+    LLMSearchResponse,
+    QueryResult,
+    QuestionResponse,
+    SearchType,
+    SemanticSearchResponse,
+)
+from app.models.synthesis import Answer
+from app.services.synthesis import llm_service
 
 logging.basicConfig(
     level=logging.INFO,
@@ -99,7 +108,7 @@ class QuestionAnsweringService:
         transcript_id: Optional[str],
         top_k: Optional[int] = 5,
         search_type: Optional[SearchType] = SearchType.KEYWORD,
-    ) -> List[QueryResult]:
+    ) -> QuestionResponse:
         logger.info(
             f"Querying transcript with {search_type} search for question: {question}"
         )
@@ -118,7 +127,7 @@ class QuestionAnsweringService:
 
     def _keyword_search(
         self, question: str, transcript_id: Optional[str]
-    ) -> List[QueryResult]:
+    ) -> KeywordSearchResponse:
         """Perform a keyword search on transcript segments."""
 
         try:
@@ -160,14 +169,19 @@ class QuestionAnsweringService:
             logger.info(
                 f"Found {len(query_results)} keyword matches for question: {question}"
             )
-            return query_results
+
+            response = KeywordSearchResponse(
+                question=question, transcript_id=transcript_id, results=query_results
+            )
+
+            return response
         except Exception as e:
             logger.error(f"Failed to perform keyword search: {e}")
             raise
 
     def _semantic_search(
         self, question: str, transcript_id: Optional[str], top_k: Optional[int] = 5
-    ) -> List[QueryResult]:
+    ) -> SemanticSearchResponse:
         """Perform a semantic search on the vector database using embeddings."""
 
         try:
@@ -207,17 +221,79 @@ class QuestionAnsweringService:
                 f"Found {len(query_results)} semantic matches for question: {question}"
             )
 
-            return query_results
+            response = SemanticSearchResponse(
+                question=question, results=query_results, transcript_id=transcript_id
+            )
+
+            return response
         except Exception as e:
             logger.error(f"Failed to perform semantic search: {e}")
             raise
 
     def _llm_search(
         self, question: str, transcript_id: Optional[str], top_k: Optional[int] = 5
-    ) -> List[QueryResult]:
+    ) -> LLMSearchResponse:
         """Use an LLM to synthesize an answer from semantic search results."""
 
-        return []
+        try:
+            semantic_search_response = self._semantic_search(
+                question, transcript_id, top_k
+            )
+            if not semantic_search_response.results:
+                logger.warning(
+                    f"No semantic results found for LLM synthesis: {question}"
+                )
+                return []
+
+            segments = []
+            for result in semantic_search_response.results:
+                segments.append(
+                    {
+                        "start_time": result.start_time,
+                        "end_time": result.end_time,
+                        "text": result.text,
+                    }
+                )
+
+            logger.info(f"Generating LLM synthesis for question: {question}")
+            answer: Answer = llm_service.generate_answer(question, segments)
+
+            supporting_segments = []
+            for point in answer.points:
+                segment = next(
+                    (
+                        result
+                        for result in semantic_search_response.results
+                        if result.start_time
+                        <= point.timestamp_seconds
+                        <= result.end_time
+                    ),
+                    None,
+                )
+
+                if not segment:
+                    segment = min(
+                        semantic_search_response.results,
+                        key=lambda r: abs(r.start_time - point.timestamp_seconds),
+                    )
+
+                supporting_segments.append(segment)
+
+            answer_response = LLMSearchResponse(
+                question=question,
+                transcript_id=transcript_id,
+                summary=answer.summary,
+                points=answer.points,
+                not_addressed=answer.not_addressed,
+                model_id=answer.model_id,
+                supporting_segments=supporting_segments,
+            )
+
+            return answer_response
+
+        except Exception as e:
+            logger.error(f"Error generating LLM response: {e}")
+            raise
 
 
 question_answering_service = QuestionAnsweringService()

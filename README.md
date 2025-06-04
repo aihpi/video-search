@@ -66,7 +66,7 @@ Additional sophisticated approaches to explore:
 
 ### Prerequisites
 
-- Python 3.8+
+- Python 3.10+
 - Node.js 16+
 - FFmpeg installed on your system
 
