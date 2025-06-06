@@ -4,7 +4,7 @@ import TranscriptionForm, {
   type TranscriptionFormHandle,
 } from "./components/TranscriptionForm";
 import TranscriptionResult from "./components/TranscriptionResult";
-import type { TranscriptionResponse } from "./types/api.types";
+import type { TranscriptionResponse } from "./types/transcription.types";
 
 const App: React.FC = () => {
   const [transcriptionResult, setTranscriptionResult] =

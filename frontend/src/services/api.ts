@@ -4,10 +4,12 @@ import type {
   TranscriptionRequest,
   TranscriptionResponse,
   WhisperModelType,
+} from "../types/transcription.types";
+import type {
   QuestionRequest,
   QuestionResponse,
   SearchType,
-} from "../types/api.types";
+} from "../types/search.types";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:9091";
 

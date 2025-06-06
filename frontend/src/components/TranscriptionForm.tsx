@@ -8,7 +8,7 @@ import React, {
 import type {
   WhisperModelType,
   TranscriptionResponse,
-} from "../types/api.types";
+} from "../types/transcription.types";
 import { transcribeVideo } from "../services/api";
 import YouTubePlayer, { type YouTubePlayerHandle } from "./YouTubePlayer";
 import { LoadingIndicatorButton } from "./LoadingIndicatorButton";

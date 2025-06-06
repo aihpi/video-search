@@ -1,12 +1,13 @@
 import React, { useState } from "react";
+import { type TranscriptionResponse } from "../types/transcription.types";
 import {
-  type TranscriptionResponse,
-  type QueryResult,
+  type SegmentResult,
   type SearchType,
   SearchTypeNames,
-} from "../types/api.types";
+} from "../types/search.types";
 import { queryTranscript } from "../services/api";
 import { LoadingIndicatorButton } from "./LoadingIndicatorButton";
+import type { LlmAnswer } from "../types/search.types";
 
 interface TranscriptionResultProps {
   transcriptionResponse: TranscriptionResponse;
@@ -24,16 +25,20 @@ const TranscriptionResult: React.FC<TranscriptionResultProps> = ({
   const [activeTab, setActiveTab] = useState<SearchType>("keyword");
 
   // State for storing results from different search methods
-  const [keywordResults, setKeywordResults] = useState<QueryResult[]>([]);
-  const [semanticResults, setSemanticResults] = useState<QueryResult[]>([]);
+  const [keywordResults, setKeywordResults] = useState<SegmentResult[]>([]);
+  const [semanticResults, setSemanticResults] = useState<SegmentResult[]>([]);
+  const [llmResults, setLlmResults] = useState<SegmentResult[]>([]);
+  const [llmAnswer, setLlmAnswer] = useState<LlmAnswer | null>(null);
 
   // Track which search methods have been used so far
   const [searchesPerformed, setSearchesPerformed] = useState<{
     keyword: boolean;
     semantic: boolean;
+    llm: boolean;
   }>({
     keyword: false,
     semantic: false,
+    llm: false,
   });
 
   // Get results for the current active tab
@@ -43,13 +48,15 @@ const TranscriptionResult: React.FC<TranscriptionResultProps> = ({
         return keywordResults;
       case "semantic":
         return semanticResults;
+      case "llm":
+        return llmResults;
       default:
         return [];
     }
   };
 
-  // Get initial segments as QueryResult objects
-  const getInitialQueryResults = (): QueryResult[] => {
+  // Get initial segments as SegmentResult objects
+  const getInitialSegmentResults = (): SegmentResult[] => {
     return transcriptionResponse.segments.map((segment) => {
       return {
         startTime: segment.start,
@@ -58,7 +65,7 @@ const TranscriptionResult: React.FC<TranscriptionResultProps> = ({
         segmentId: segment.id,
         transcriptId: transcriptionResponse.id,
         relevanceScore: null,
-      } as QueryResult;
+      } as SegmentResult;
     });
   };
 
@@ -86,12 +93,21 @@ const TranscriptionResult: React.FC<TranscriptionResultProps> = ({
       console.log("Query response:", response);
 
       // Store results in the appropriate state variable
-      if (activeTab === "keyword") {
+      if (response.searchType === "keyword") {
         setKeywordResults(response.results);
         setSearchesPerformed((prev) => ({ ...prev, keyword: true }));
-      } else if (activeTab === "semantic") {
+      } else if (response.searchType === "semantic") {
         setSemanticResults(response.results);
         setSearchesPerformed((prev) => ({ ...prev, semantic: true }));
+      } else if (response.searchType === "llm") {
+        setLlmResults(response.results);
+        setLlmAnswer({
+          summary: response.summary,
+          points: response.points,
+          notAddressed: response.notAddressed,
+          modelId: response.modelId,
+        });
+        setSearchesPerformed((prev) => ({ ...prev, llm: true }));
       }
 
       setActiveSegment(null);
@@ -103,13 +119,16 @@ const TranscriptionResult: React.FC<TranscriptionResultProps> = ({
         setKeywordResults([]);
       } else if (activeTab === "semantic") {
         setSemanticResults([]);
+      } else if (activeTab === "llm") {
+        setLlmResults([]);
+        setLlmAnswer(null);
       }
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleResultClick = (segment: QueryResult) => {
+  const handleResultClick = (segment: SegmentResult) => {
     if (onSeekToTime) {
       onSeekToTime(segment.startTime);
     }
@@ -120,7 +139,9 @@ const TranscriptionResult: React.FC<TranscriptionResultProps> = ({
     setQuestion("");
     setKeywordResults([]);
     setSemanticResults([]);
-    setSearchesPerformed({ keyword: false, semantic: false });
+    setLlmResults([]);
+    setLlmAnswer(null);
+    setSearchesPerformed({ keyword: false, semantic: false, llm: false });
     setActiveSegment(null);
     setError(null);
   };
@@ -131,13 +152,13 @@ const TranscriptionResult: React.FC<TranscriptionResultProps> = ({
     setError(null);
   };
 
-  const currentResults: () => QueryResult[] = () => {
+  const currentResults: () => SegmentResult[] = () => {
     const activeTabResults = getActiveTabResults();
     if (activeTabResults.length > 0) {
       return activeTabResults;
     }
     if (!searchesPerformed[activeTab]) {
-      return getInitialQueryResults();
+      return getInitialSegmentResults();
     }
     return [];
   };
@@ -199,29 +220,65 @@ const TranscriptionResult: React.FC<TranscriptionResultProps> = ({
         <div className="bg-gray-50 p-4 rounded-md space-y-2 max-h-96 overflow-y-auto">
           {/* Search Type Tabs */}
           <div className="flex border-b border-gray-200 mb-4">
-            <button
-              onClick={() => handleTabChange("keyword")}
-              className={`px-4 py-2 text-sm font-medium ${
-                activeTab === "keyword"
-                  ? "text-indigo-600 border-b-2 border-indigo-600"
-                  : "text-gray-500 hover:text-gray-700"
-              }`}
-            >
-              {SearchTypeNames.keyword} {searchesPerformed.keyword && "✓"}
-            </button>
-            <button
-              onClick={() => handleTabChange("semantic")}
-              className={`px-4 py-2 text-sm font-medium ml-4 ${
-                activeTab === "semantic"
-                  ? "text-indigo-600 border-b-2 border-indigo-600"
-                  : "text-gray-500 hover:text-gray-700"
-              }`}
-            >
-              {SearchTypeNames.semantic} {searchesPerformed.semantic && "✓"}
-            </button>
+            {(Object.keys(SearchTypeNames) as SearchType[]).map(
+              (searchType, index) => (
+                <button
+                  key={searchType}
+                  onClick={() => handleTabChange(searchType)}
+                  className={`px-4 py-2 text-sm font-medium ${index > 0 ? "ml-4" : ""} ${
+                    activeTab === searchType
+                      ? "text-indigo-600 border-b-2 border-indigo-600"
+                      : "text-gray-500 hover:text-gray-700"
+                  }`}
+                >
+                  {SearchTypeNames[searchType]}{" "}
+                  {searchesPerformed[searchType] && "✓"}
+                </button>
+              )
+            )}
           </div>
+
+          {/* LLM Answer Display */}
+          {activeTab === "llm" && llmAnswer && (
+            <div className="mb-4 p-4 bg-blue-50 rounded-md border border-blue-200">
+              <h3 className="font-semibold text-lg mb-2">AI Summary</h3>
+              <p className="text-gray-700 mb-3">{llmAnswer.summary}</p>
+
+              {llmAnswer.points.length > 0 && (
+                <div>
+                  <h4 className="font-medium text-sm text-gray-600 mb-1">
+                    Key Points:
+                  </h4>
+                  <ul className="space-y-1">
+                    {llmAnswer.points.map((point, index) => (
+                      <li
+                        key={index}
+                        className="flex items-start cursor-pointer hover:bg-blue-100 p-1 rounded"
+                        onClick={() =>
+                          onSeekToTime && onSeekToTime(point.timestamp)
+                        }
+                      >
+                        <span className="text-blue-600 text-sm mr-2">
+                          [{formatTime(point.timestamp)}]
+                        </span>
+                        <span className="text-sm">{point.text}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {llmAnswer.notAddressed && (
+                <p className="text-sm text-orange-600 mt-2">
+                  ⚠️ Some aspects of your question could not be answered from
+                  the transcript.
+                </p>
+              )}
+            </div>
+          )}
+
           {currentResults().length > 0 &&
-            currentResults().map((result: QueryResult) => (
+            currentResults().map((result: SegmentResult) => (
               <div
                 key={result.segmentId}
                 className={`p-3 rounded-md cursor-pointer ${
