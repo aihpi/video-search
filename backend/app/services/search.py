@@ -5,7 +5,7 @@ from typing import Optional
 from chromadb.utils.embedding_functions import SentenceTransformerEmbeddingFunction
 
 from app.models.transcription import Transcript
-from app.models.question_answering import (
+from app.models.search import (
     KeywordSearchResponse,
     LLMSearchResponse,
     QueryResult,
@@ -13,8 +13,8 @@ from app.models.question_answering import (
     SearchType,
     SemanticSearchResponse,
 )
-from app.models.synthesis import Answer
-from app.services.synthesis import llm_service
+from app.models.llms import Answer
+from app.services.llms import llm_service
 
 logging.basicConfig(
     level=logging.INFO,
@@ -31,7 +31,7 @@ CHROMA_DB_DIR = os.getenv("CHROMA_DB_DIR", "chroma_db")
 COLLECTION_NAME = os.getenv("COLLECTION_NAME", "transcript_embeddings")
 
 
-class QuestionAnsweringService:
+class SearchService:
     _instance = None
     _db = None
     _collection = None
@@ -140,7 +140,9 @@ class QuestionAnsweringService:
 
             if not results or not results["documents"]:
                 logger.warning(f"No segments found for transcript ID: {transcript_id}")
-                return []
+                return KeywordSearchResponse(
+                    question=question, transcript_id=transcript_id, results=[]
+                )
 
             documents = results["documents"]
             metadatas = results["metadatas"]
@@ -152,7 +154,9 @@ class QuestionAnsweringService:
 
             if not filtered_documents:
                 logger.warning(f"No keyword matches found for question: {question}")
-                return []
+                return KeywordSearchResponse(
+                    question=question, transcript_id=transcript_id, results=[]
+                )
 
             query_results = [
                 QueryResult(
@@ -199,7 +203,9 @@ class QuestionAnsweringService:
 
             if not documents:
                 logger.warning(f"No semantic matches found for question: {question}")
-                return []
+                return SemanticSearchResponse(
+                    question=question, transcript_id=transcript_id, results=[]
+                )
 
             distances = results["distances"][0]
 
@@ -243,7 +249,15 @@ class QuestionAnsweringService:
                 logger.warning(
                     f"No semantic results found for LLM synthesis: {question}"
                 )
-                return []
+                return LLMSearchResponse(
+                    question=question,
+                    transcript_id=transcript_id,
+                    results=[],
+                    summary="No relevant information found in the transcript.",
+                    points=[],
+                    not_addressed=True,
+                    model_id="none",
+                )
 
             segments = []
             for result in semantic_search_response.results:
@@ -296,4 +310,4 @@ class QuestionAnsweringService:
             raise
 
 
-question_answering_service = QuestionAnsweringService()
+search_service = SearchService()

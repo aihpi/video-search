@@ -13,7 +13,7 @@ from app.models.transcription import (
     TranscriptSegment,
 )
 from app.services.transcription import process_video_sync, cleanup_file
-from app.services.question_answering import question_answering_service
+from app.services.search import search_service
 
 logging.basicConfig(
     level=logging.INFO,
@@ -30,7 +30,7 @@ executor = ThreadPoolExecutor(max_workers=4)
 TEMP_DIR = os.getenv("TMPDIR", "/tmp")
 
 
-@transcription_router.post("/transcribe-video", response_model=TranscriptionResponse)
+@transcription_router.post("/video", response_model=TranscriptionResponse)
 async def transcribe_video(
     request: TranscriptionRequest, background_tasks: BackgroundTasks
 ):
@@ -78,7 +78,7 @@ async def transcribe_video(
             for i, seg in enumerate(result["segments"])
         ]
 
-        question_answering_service.index_transcript(
+        search_service.index_transcript(
             Transcript(id=id, text=transcript_text, segments=segments)
         )
 

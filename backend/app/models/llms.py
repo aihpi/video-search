@@ -1,5 +1,7 @@
 from pydantic import BaseModel, Field
-from typing import List
+from typing import List, Optional
+
+from app.models.camel_case import CamelCaseModel
 
 
 # Schema for structured output for LLM answers
@@ -28,3 +30,26 @@ class Answer(BaseModel):
     model_id: str = Field(
         ..., description="Identifier for the model used to generate the answer."
     )
+
+
+# API Models for model management
+class LLMInfo(CamelCaseModel):
+    id: str
+    name: str
+    requires_gpu: bool
+    loaded: bool
+
+
+class LLMListResponse(CamelCaseModel):
+    models: List[LLMInfo]
+    active_model_id: Optional[str] = None
+    has_gpu: bool = False
+
+
+class LLMSelectRequest(CamelCaseModel):
+    model_id: str
+
+
+class LLMSelectResponse(CamelCaseModel):
+    success: bool
+    model_id: Optional[str] = None

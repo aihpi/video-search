@@ -33,7 +33,7 @@ export const transcribeVideo = async (
 
   try {
     const response = await apiClient.post<TranscriptionResponse>(
-      "/transcribe-video",
+      "/transcribe/video",
       requestBody
     );
     return response.data;
@@ -58,7 +58,7 @@ export const queryTranscript = async (
 
   try {
     const response = await apiClient.post<QuestionResponse>(
-      "/question",
+      "/search/query",
       requestBody
     );
     return response.data;

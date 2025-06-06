@@ -4,9 +4,9 @@ import os
 import re
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
-from ..models.synthesis import Answer, AnswerPoint
+from ..models.llms import Answer, AnswerPoint, LLMInfo
 
 
 logging.basicConfig(
@@ -29,6 +29,7 @@ class LLMService:
         if cls._instance == None:
             cls._instance = super().__new__(cls)
             cls._instance._initialize()
+        return cls._instance
 
     def _initialize(self):
         self._has_gpu = torch.cuda.is_available()
@@ -90,7 +91,7 @@ class LLMService:
         logger.info(f"Registered model {model_id}")
         return True
 
-    def load_model(self, model_id=str) -> bool:
+    def load_model(self, model_id: str) -> bool:
         """Load a registered model into memory"""
         if model_id not in self._models:
             logger.error(f"Model {model_id} not found in registry.")
@@ -344,6 +345,32 @@ Answer:"""
             not_addressed=not_addressed,
             model_id=self._active_model_id,
         )
+
+    def get_available_models(self) -> List[LLMInfo]:
+        """Get list of available models with their current status."""
+        models = []
+        for model_id, model_data in self._models.items():
+            models.append(
+                LLMInfo(
+                    id=model_id,
+                    name=model_data["name"],
+                    requires_gpu=model_data["requires_gpu"],
+                    loaded=model_data["loaded"],
+                )
+            )
+        return models
+
+    def get_active_model_id(self) -> Optional[str]:
+        """Get the currently active model ID."""
+        return self._active_model_id
+
+    def select_model(self, model_id: str) -> bool:
+        """Select and load a model."""
+        return self.load_model(model_id)
+
+    def has_gpu(self) -> bool:
+        """Check if GPU is available."""
+        return self._has_gpu
 
 
 llm_service = LLMService()
