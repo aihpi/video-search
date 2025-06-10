@@ -4,21 +4,39 @@ interface LoadingIndicatorButtonProps {
   isLoading: boolean;
   buttonText: string;
   disabled?: boolean;
+  onClick?: () => void;
+  className?: string;
+  type?: "button" | "submit" | "reset";
 }
 
 export const LoadingIndicatorButton: React.FC<LoadingIndicatorButtonProps> = ({
   isLoading,
   buttonText,
   disabled = false,
+  onClick,
+  className = "",
+  type = "submit",
 }) => {
+  const baseClasses = "flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500";
+  
+  const stateClasses = isLoading || disabled 
+    ? "bg-indigo-400 cursor-not-allowed" 
+    : "bg-indigo-600 hover:bg-indigo-700";
+  
+  // If className is provided, it can override w-full
+  const widthClass = className?.includes('w-') ? '' : 'w-full';
+  
+  const combinedClasses = [baseClasses, stateClasses, widthClass, className]
+    .filter(Boolean)
+    .join(' ');
+
   return (
     <div>
       <button
-        type="submit"
+        type={type}
         disabled={isLoading || disabled}
-        className={`w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-gray-700 ${
-          isLoading ? "bg-indigo-400" : "bg-indigo-600 hover:bg-indigo-700"
-        } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500`}
+        onClick={onClick}
+        className={combinedClasses}
       >
         {isLoading ? (
           <>

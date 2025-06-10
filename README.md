@@ -110,10 +110,10 @@ COLLECTION_NAME=transcript_embeddings
 - Propagate errors from search result component to app error component
 - Support file upload in addition to Video URL
 - Fix tokenizer parallelism warnings by setting `TOKENIZERS_PARALLELISM=false`
-- Complete LLM synthesis implementation
 - Implement VLM search functionality
 - Add progress indicators for long-running operations
-- Implement result caching for repeated queries
+- Simplify LLMSelector component
+- Fix tests
 
 ## Workshop Usage
 

@@ -300,7 +300,7 @@ class SearchService:
                 points=answer.points,
                 not_addressed=answer.not_addressed,
                 model_id=answer.model_id,
-                supporting_segments=supporting_segments,
+                results=supporting_segments,
             )
 
             return answer_response

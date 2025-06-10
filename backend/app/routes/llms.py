@@ -1,16 +1,17 @@
 from fastapi import APIRouter, HTTPException, status
 
 from app.models.llms import (
-    LLMListResponse,
-    LLMSelectRequest,
-    LLMSelectResponse,
+    LlmListResponse,
+    LlmSelectRequest,
+    LlmSelectResponse,
+    CurrentLlmInfoResponse,
 )
 from app.services.llms import llm_service
 
 llm_router = APIRouter()
 
 
-@llm_router.get("", response_model=LLMListResponse)
+@llm_router.get("", response_model=LlmListResponse)
 async def list_llms():
     """Get list of available LLM models."""
     try:
@@ -18,7 +19,7 @@ async def list_llms():
         active_model_id = llm_service.get_active_model_id()
         has_gpu = llm_service.has_gpu()
 
-        return LLMListResponse(
+        return LlmListResponse(
             models=models, active_model_id=active_model_id, has_gpu=has_gpu
         )
     except Exception as e:
@@ -28,16 +29,16 @@ async def list_llms():
         )
 
 
-@llm_router.post("/select", response_model=LLMSelectResponse)
-async def select_llm(request: LLMSelectRequest):
+@llm_router.post("/select", response_model=LlmSelectResponse)
+async def select_llm(request: LlmSelectRequest):
     """Select and load a specific LLM model."""
     try:
         success = llm_service.select_model(request.model_id)
 
         if success:
-            return LLMSelectResponse(success=True, model_id=request.model_id)
+            return LlmSelectResponse(success=True, model_id=request.model_id)
         else:
-            return LLMSelectResponse(success=False, model_id=None)
+            return LlmSelectResponse(success=False, model_id=None)
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -45,17 +46,19 @@ async def select_llm(request: LLMSelectRequest):
         )
 
 
-@llm_router.get("/current")
+@llm_router.get("/current", response_model=CurrentLlmInfoResponse)
 async def get_current_llm():
     """Get the currently active LLM."""
     try:
         current_model_id = llm_service.get_active_model_id()
         if current_model_id:
             models = llm_service.get_available_models()
-            current_model = next((m for m in models if m.id == current_model_id), None)
-            return {"llm": current_model}
+            current_model = next(
+                (m for m in models if m.model_id == current_model_id), None
+            )
+            return current_model
         else:
-            return {"llm": None}
+            return None
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

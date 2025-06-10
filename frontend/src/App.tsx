@@ -4,6 +4,7 @@ import TranscriptionForm, {
   type TranscriptionFormHandle,
 } from "./components/TranscriptionForm";
 import TranscriptionResult from "./components/TranscriptionResult";
+import LLMSelector from "./components/LLMSelector";
 import type { TranscriptionResponse } from "./types/transcription.types";
 
 const App: React.FC = () => {
@@ -51,17 +52,20 @@ const App: React.FC = () => {
             </div>
           )}
         </div>
-        <TranscriptionForm
-          ref={transcriptionFormRef}
-          onTranscriptionComplete={handleTranscriptionComplete}
-          onError={handleError}
-        />
-        {transcriptionResult && (
-          <TranscriptionResult
-            transcriptionResponse={transcriptionResult}
-            onSeekToTime={handleSeekToTime}
+        <div className="space-y-6">
+          <LLMSelector onError={handleError} />
+          <TranscriptionForm
+            ref={transcriptionFormRef}
+            onTranscriptionComplete={handleTranscriptionComplete}
+            onError={handleError}
           />
-        )}
+          {transcriptionResult && (
+            <TranscriptionResult
+              transcriptionResponse={transcriptionResult}
+              onSeekToTime={handleSeekToTime}
+            />
+          )}
+        </div>
       </div>
     </div>
   );

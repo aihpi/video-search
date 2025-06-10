@@ -5,9 +5,12 @@ import re
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 from typing import Any, Dict, List, Optional
+from dotenv import load_dotenv
 
-from ..models.llms import Answer, AnswerPoint, LLMInfo
+from ..models.llms import Answer, AnswerPoint, LlmInfo
 
+
+load_dotenv()
 
 logging.basicConfig(
     level=logging.INFO,
@@ -36,14 +39,23 @@ class LLMService:
 
         self._register_available_models()
 
-        default_model_id = os.getenv("DEFAULT_LLM", "phi-2")
+        default_model_id = os.getenv("DEFAULT_LLM", "gemma-2b")
         if default_model_id in self._models:
             self._active_model_id = default_model_id
         elif len(self._models) > 0:
             self._active_model_id = next(iter(self._models.keys()))
 
+        self.load_model(self._active_model_id)
+
     def _register_available_models(self):
-        # Always register phi-2 and qwen2.5 (can work on CPU)
+        # Small models that can work on CPU
+        self._register_model(
+            model_id="tinyllama",
+            display_name="TinyLlama (1.1B)",
+            hf_model_id="TinyLlama/TinyLlama-1.1B-Chat-v1.0",
+            requires_gpu=False,
+        )
+
         self._register_model(
             model_id="qwen-2.5",
             display_name="Qwen 2.5 (0.5B)",
@@ -54,6 +66,34 @@ class LLMService:
             model_id="phi-2",
             display_name="Phi-2 (2.7B)",
             hf_model_id="microsoft/phi-2",
+            requires_gpu=False,
+        )
+
+        self._register_model(
+            model_id="gemma-2b",
+            display_name="Gemma 2 (2B)",
+            hf_model_id="google/gemma-2-2b-it",
+            requires_gpu=False,
+        )
+
+        self._register_model(
+            model_id="stablelm-2",
+            display_name="StableLM 2 (1.6B)",
+            hf_model_id="stabilityai/stablelm-2-1_6b-chat",
+            requires_gpu=False,
+        )
+
+        self._register_model(
+            model_id="orca-mini",
+            display_name="Orca Mini (3B)",
+            hf_model_id="pankajmathur/orca_mini_3b",
+            requires_gpu=False,
+        )
+
+        self._register_model(
+            model_id="smollm2",
+            display_name="SmolLM2 (1.7B)",
+            hf_model_id="HuggingFaceTB/SmolLM2-1.7B-Instruct",
             requires_gpu=False,
         )
 
@@ -131,15 +171,23 @@ class LLMService:
                 model_kwargs["torch_dtype"] = torch.float32
                 model_kwargs["low_cpu_mem_usage"] = True
 
+            # Get HF token for gated models
+            hf_token = os.getenv("HUGGINGFACE_HUB_TOKEN")
+            
             tokenizer = AutoTokenizer.from_pretrained(
-                model_info["hf_model_id"], trust_remote_code=True
+                model_info["hf_model_id"], 
+                trust_remote_code=True,
+                token=hf_token
             )
 
             if tokenizer.pad_token is None:
                 tokenizer.pad_token = tokenizer.eos_token
 
             model = AutoModelForCausalLM.from_pretrained(
-                model_info["hf_model_id"], trust_remote_code=True, **model_kwargs
+                model_info["hf_model_id"], 
+                trust_remote_code=True, 
+                token=hf_token,
+                **model_kwargs
             )
 
             # Move to device if not using device_map
@@ -273,9 +321,9 @@ Answer:"""
         not_addressed = False
 
         response = response.strip()
-
+        logger.info(f"Parsing response: {response}")
         summary_match = re.search(
-            r"SUMMARY:\s*\n(.*?)(?=KEY POINTS:|$)", response, re.DOTALL
+            r"SUMMARY:\s*\n(.*?)(?=KEY POINTS:|$)", response, re.DOTALL | re.IGNORECASE
         )
 
         # Extract SUMMARY section
@@ -286,7 +334,9 @@ Answer:"""
 
         # Extract KEY POINTS section
         key_points_match = re.search(
-            r"KEY POINTS:\s*\n(.*?)(?=COMPLETENESS:|$)", response, re.DOTALL
+            r"KEY POINTS:\s*\n(.*?)(?=COMPLETENESS:|$)",
+            response,
+            re.DOTALL | re.IGNORECASE,
         )
         if key_points_match:
             key_points_str = key_points_match.group(1).strip()
@@ -310,7 +360,7 @@ Answer:"""
                     )
 
         completeness_match = re.search(
-            r"COMPLETENESS:\s*\n(.*?)(?:\n|$)", response, re.DOTALL
+            r"COMPLETENESS:\s*\n(.*?)(?:\n|$)", response, re.DOTALL | re.IGNORECASE
         )
         if completeness_match:
             completeness_str = completeness_match.group(1).strip().upper()
@@ -346,14 +396,15 @@ Answer:"""
             model_id=self._active_model_id,
         )
 
-    def get_available_models(self) -> List[LLMInfo]:
+    def get_available_models(self) -> List[LlmInfo]:
         """Get list of available models with their current status."""
         models = []
         for model_id, model_data in self._models.items():
             models.append(
-                LLMInfo(
-                    id=model_id,
-                    name=model_data["name"],
+                LlmInfo(
+                    model_id=model_id,
+                    display_name=model_data["name"],
+                    hf_model_id=model_data["hf_model_id"],
                     requires_gpu=model_data["requires_gpu"],
                     loaded=model_data["loaded"],
                 )

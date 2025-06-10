@@ -33,23 +33,27 @@ class Answer(BaseModel):
 
 
 # API Models for model management
-class LLMInfo(CamelCaseModel):
-    id: str
-    name: str
+class LlmInfo(CamelCaseModel):
+    model_id: str
+    display_name: str
+    hf_model_id: str
     requires_gpu: bool
     loaded: bool
 
 
-class LLMListResponse(CamelCaseModel):
-    models: List[LLMInfo]
+CurrentLlmInfoResponse = LlmInfo | None
+
+
+class LlmListResponse(CamelCaseModel):
+    models: List[LlmInfo]
     active_model_id: Optional[str] = None
     has_gpu: bool = False
 
 
-class LLMSelectRequest(CamelCaseModel):
+class LlmSelectRequest(CamelCaseModel):
     model_id: str
 
 
-class LLMSelectResponse(CamelCaseModel):
+class LlmSelectResponse(CamelCaseModel):
     success: bool
     model_id: Optional[str] = None

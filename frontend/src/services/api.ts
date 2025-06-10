@@ -11,6 +11,12 @@ import type {
   SearchType,
 } from "../types/search.types";
 
+import type {
+  LlmInfo,
+  LlmListResponse,
+  LlmSelectResponse,
+} from "../types/llms.types";
+
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:9091";
 
 const apiClient = axios.create({
@@ -66,6 +72,38 @@ export const queryTranscript = async (
     return response.data;
   } catch (error) {
     console.error("Error during query:", error);
+    throw error;
+  }
+};
+
+export const getCurrentLlmInfo = async (): Promise<LlmInfo | null> => {
+  try {
+    const response = await apiClient.get("/llms/current");
+    return response.data;
+  } catch (error) {
+    console.error("Error while retrieving current LLM info:", error);
+    throw error;
+  }
+};
+
+export const listLlms = async (): Promise<LlmListResponse> => {
+  try {
+    const response = await apiClient.get("/llms");
+    return response.data;
+  } catch (error) {
+    console.error("Error while retrieving list of available models", error);
+    throw error;
+  }
+};
+
+export const selectLlm = async (
+  modelId: string
+): Promise<LlmSelectResponse> => {
+  try {
+    const response = await apiClient.post("/llms/select", { modelId });
+    return response.data;
+  } catch (error) {
+    console.error(`Error selecting model ${modelId}`, error);
     throw error;
   }
 };

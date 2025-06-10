@@ -1,0 +1,37 @@
+services:
+  # CPU version
+  app-cpu:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.cpu
+    ports:
+      - "9091:9091"
+    env_file:
+      - ./backend/.env
+    profiles:
+      - cpu
+      - default
+
+  # GPU version
+  app-gpu:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.gpu
+    ports:
+      - "9091:9091"
+    env_file:
+      - ./backend/.env
+    runtime: nvidia
+    profiles:
+      - gpu
+
+  # Frontend
+  frontend:
+    build:
+      context: ./frontend
+    ports:
+      - "5173:5173"
+    profiles:
+      - cpu
+      - default
+      - gpu

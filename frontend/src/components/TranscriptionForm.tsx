@@ -29,7 +29,7 @@ const TranscriptionForm = forwardRef<
   const [videoUrl, setVideoUrl] = useState("");
   const [videoId, setVideoId] = useState<string | null>(null);
   const [language, setLanguage] = useState<string>("");
-  const [model, setModel] = useState<WhisperModelType>("tiny");
+  const [model, setModel] = useState<WhisperModelType>("small");
   const [isLoading, setIsLoading] = useState(false);
   const youtubePlayerRef = useRef<YouTubePlayerHandle>(null);
 
