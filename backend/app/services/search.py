@@ -13,7 +13,7 @@ from app.models.search import (
     SearchType,
     SemanticSearchResponse,
 )
-from app.models.llms import Answer
+from app.models.llms import LlmAnswer
 from app.services.llms import llm_service
 
 logging.basicConfig(
@@ -242,7 +242,7 @@ class SearchService:
         """Use an LLM to synthesize an answer from semantic search results."""
 
         try:
-            semantic_search_response = self._semantic_search(
+            semantic_search_response: SemanticSearchResponse = self._semantic_search(
                 question, transcript_id, top_k
             )
             if not semantic_search_response.results:
@@ -254,53 +254,22 @@ class SearchService:
                     transcript_id=transcript_id,
                     results=[],
                     summary="No relevant information found in the transcript.",
-                    points=[],
                     not_addressed=True,
                     model_id="none",
                 )
 
-            segments = []
-            for result in semantic_search_response.results:
-                segments.append(
-                    {
-                        "start_time": result.start_time,
-                        "end_time": result.end_time,
-                        "text": result.text,
-                    }
-                )
-
             logger.info(f"Generating LLM synthesis for question: {question}")
-            answer: Answer = llm_service.generate_answer(question, segments)
-
-            supporting_segments = []
-            for point in answer.points:
-                segment = next(
-                    (
-                        result
-                        for result in semantic_search_response.results
-                        if result.start_time
-                        <= point.timestamp_seconds
-                        <= result.end_time
-                    ),
-                    None,
-                )
-
-                if not segment:
-                    segment = min(
-                        semantic_search_response.results,
-                        key=lambda r: abs(r.start_time - point.timestamp_seconds),
-                    )
-
-                supporting_segments.append(segment)
+            answer: LlmAnswer = llm_service.generate_answer(
+                question, semantic_search_response.results
+            )
 
             answer_response = LLMSearchResponse(
                 question=question,
                 transcript_id=transcript_id,
                 summary=answer.summary,
-                points=answer.points,
                 not_addressed=answer.not_addressed,
                 model_id=answer.model_id,
-                results=supporting_segments,
+                results=semantic_search_response.results,
             )
 
             return answer_response

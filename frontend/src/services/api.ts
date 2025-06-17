@@ -26,7 +26,7 @@ const apiClient = axios.create({
   },
 });
 
-export const transcribeVideo = async (
+export const transcribeVideoUrl = async (
   videoUrl: string,
   model?: WhisperModelType,
   language?: string
@@ -41,12 +41,45 @@ export const transcribeVideo = async (
 
   try {
     const response = await apiClient.post<TranscriptionResponse>(
-      "/transcribe/video",
+      "/transcribe/video-url",
       requestBody
     );
     return response.data;
   } catch (error) {
     console.error("Error during transcription:", error);
+    throw error;
+  }
+};
+
+export const transcribeVideoFile = async (
+  videoFile: File,
+  model?: WhisperModelType,
+  language?: string
+): Promise<TranscriptionResponse> => {
+  const formData = new FormData();
+  formData.append("video_file", videoFile);
+
+  if (model) {
+    formData.append("model", model);
+  }
+
+  if (language && language !== "") {
+    formData.append("language", language);
+  }
+
+  try {
+    const response = await axios.post<TranscriptionResponse>(
+      `${API_URL}/transcribe/video-file`,
+      formData,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      }
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Error during file transcription:", error);
     throw error;
   }
 };

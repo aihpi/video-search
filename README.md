@@ -107,12 +107,9 @@ COLLECTION_NAME=transcript_embeddings
 ## Current Issues and TODOs
 
 - Highlight search keywords in keyword search results
-- Propagate errors from search result component to app error component
-- Support file upload in addition to Video URL
 - Fix tokenizer parallelism warnings by setting `TOKENIZERS_PARALLELISM=false`
 - Implement VLM search functionality
 - Add progress indicators for long-running operations
-- Simplify LLMSelector component
 - Fix tests
 
 ## Workshop Usage
@@ -125,7 +122,3 @@ This demonstrator is designed for ML workshops to showcase:
 4. The importance of user experience (click-to-seek functionality)
 
 Each search method builds upon the previous ones, demonstrating increasing levels of AI sophistication while maintaining practical usability.
-
-## Contributing
-
-Feel free to extend this demonstrator with additional search methods or improvements to existing ones. The modular architecture makes it easy to add new search strategies.

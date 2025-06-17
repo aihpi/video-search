@@ -22,14 +22,8 @@ export type SegmentResult = {
   relevanceScore: number | null;
 };
 
-export type LlmAnswerPoint = {
-  timestamp: number;
-  text: string;
-};
-
 export type LlmAnswer = {
   summary: string;
-  points: LlmAnswerPoint[];
   notAddressed: boolean;
   modelId: string;
 };

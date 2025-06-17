@@ -4,10 +4,11 @@ import os
 import re
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
-from typing import Any, Dict, List, Optional
+from typing import List, Optional
 from dotenv import load_dotenv
 
-from ..models.llms import Answer, AnswerPoint, LlmInfo
+from ..models.llms import LlmAnswer, LlmInfo
+from ..models.search import QueryResult
 
 
 load_dotenv()
@@ -39,7 +40,7 @@ class LLMService:
 
         self._register_available_models()
 
-        default_model_id = os.getenv("DEFAULT_LLM", "gemma-2b")
+        default_model_id = os.getenv("DEFAULT_LLM", "tinyllama")
         if default_model_id in self._models:
             self._active_model_id = default_model_id
         elif len(self._models) > 0:
@@ -80,13 +81,6 @@ class LLMService:
             model_id="stablelm-2",
             display_name="StableLM 2 (1.6B)",
             hf_model_id="stabilityai/stablelm-2-1_6b-chat",
-            requires_gpu=False,
-        )
-
-        self._register_model(
-            model_id="orca-mini",
-            display_name="Orca Mini (3B)",
-            hf_model_id="pankajmathur/orca_mini_3b",
             requires_gpu=False,
         )
 
@@ -173,21 +167,19 @@ class LLMService:
 
             # Get HF token for gated models
             hf_token = os.getenv("HUGGINGFACE_HUB_TOKEN")
-            
+
             tokenizer = AutoTokenizer.from_pretrained(
-                model_info["hf_model_id"], 
-                trust_remote_code=True,
-                token=hf_token
+                model_info["hf_model_id"], trust_remote_code=True, token=hf_token
             )
 
             if tokenizer.pad_token is None:
                 tokenizer.pad_token = tokenizer.eos_token
 
             model = AutoModelForCausalLM.from_pretrained(
-                model_info["hf_model_id"], 
-                trust_remote_code=True, 
+                model_info["hf_model_id"],
+                trust_remote_code=True,
                 token=hf_token,
-                **model_kwargs
+                **model_kwargs,
             )
 
             # Move to device if not using device_map
@@ -237,8 +229,8 @@ class LLMService:
                 torch.cuda.empty_cache()
 
     def generate_answer(
-        self, question: str, segments: List[Dict[str, Any]], max_new_tokens: int = 512
-    ) -> Answer:
+        self, question: str, segments: List[QueryResult], max_new_tokens: int = 512
+    ) -> LlmAnswer:
         """Generate a structured answer using the active model."""
         if not self._active_model or not self._active_tokenizer:
             raise ValueError("No model loaded")
@@ -269,20 +261,18 @@ class LLMService:
         )
 
         # Convert output into structured answer
-        answer = self._parse_response(response, question, segments)
+        answer = self._parse_response(response, question)
 
         return answer
 
-    def _create_prompt(self, question: str, segments: List[Dict[str, Any]]) -> str:
+    def _create_prompt(self, question: str, segments: List[QueryResult]) -> str:
         context = ""
         for segment in segments:
-            timestamp_str = f'{segment["start_time"]:.1f} - {segment["end_time"]:.1f}'
-            context += f'{timestamp_str} {segment["text"]}\n\n'
+            timestamp_str = f"{segment.start_time:.1f} - {segment.end_time:.1f}"
+            context += f"{timestamp_str} {segment.text}\n\n"
 
         prompt = f"""You are analyzing a video transcript to answer a question.
 Based on the transcript segments below, provide a comprehensive answer.
-
-Important: When referencing information, always include the timestamp in seconds where it appears.
 
 Transcript segments:
 {context}
@@ -294,71 +284,32 @@ You MUST format your response EXACTLY as follows:
 SUMMARY:
 [Write 2-3 sentences summarizing the answer]
 
-KEY POINTS:
-- [First point] (timestamp: XX.Xs)
-- [Second point] (timestamp: XX.Xs)
-- [Third point] (timestamp: XX.Xs)
-[Include at least 1 key point, each with a timestamp]
-
 COMPLETENESS:
 [State one of: "COMPLETE" if the transcript fully answers the question, "PARTIAL" if only some aspects are covered, or "NOT FOUND" if the transcript doesn't contain relevant information]
-
-IMPORTANT RULES:
-1. Use ONLY timestamps that appear in the transcript segments above
-2. Format timestamps exactly as: (timestamp: XX.Xs)
-3. Each key point MUST have a timestamp
-4. Follow the exact format with SUMMARY:, KEY POINTS:, and COMPLETENESS: headers
 
 Answer:"""
 
         return prompt
 
-    def _parse_response(
-        self, response: str, question: str, segments: List[Dict[str, Any]]
-    ) -> Answer:
+    def _parse_response(self, response: str, question: str) -> LlmAnswer:
         summary = ""
-        points = []
         not_addressed = False
 
         response = response.strip()
         logger.info(f"Parsing response: {response}")
-        summary_match = re.search(
-            r"SUMMARY:\s*\n(.*?)(?=KEY POINTS:|$)", response, re.DOTALL | re.IGNORECASE
-        )
 
         # Extract SUMMARY section
+        summary_match = re.search(
+            r"SUMMARY:\s*\n(.*?)(?=COMPLETENESS:|$)",
+            response,
+            re.DOTALL | re.IGNORECASE,
+        )
         if summary_match:
             summary = summary_match.group(1).strip()
             # Remove any bullet points or extra formatting
             summary = " ".join(summary.split())  # Normalize whitespace
 
-        # Extract KEY POINTS section
-        key_points_match = re.search(
-            r"KEY POINTS:\s*\n(.*?)(?=COMPLETENESS:|$)",
-            response,
-            re.DOTALL | re.IGNORECASE,
-        )
-        if key_points_match:
-            key_points_str = key_points_match.group(1).strip()
-
-            # Find all bullet points with timestamps
-            # Pattern: - [content] (timestamp: XX.Xs)
-            key_point_pattern = r"-\s*([^(\n]+)\s*\(timestamp:\s*(\d+\.?\d*)s\)"
-
-            for match in re.finditer(key_point_pattern, key_points_str):
-                content = match.group(1).strip()
-                timestamp = float(match.group(2))
-
-                # Validate timestamp is within segment range
-                if (
-                    segments
-                    and timestamp >= segments[0]["start_time"]
-                    and timestamp <= segments[-1]["end_time"]
-                ):
-                    points.append(
-                        AnswerPoint(content=content, timestamp_seconds=timestamp)
-                    )
-
+        # Extract COMPLETENESS section
         completeness_match = re.search(
             r"COMPLETENESS:\s*\n(.*?)(?:\n|$)", response, re.DOTALL | re.IGNORECASE
         )
@@ -373,25 +324,13 @@ Answer:"""
         if not summary:
             # Try to extract first paragraph as summary
             first_para = response.split("\n\n")[0].strip()
-            if first_para and not first_para.startswith(
-                ("SUMMARY:", "KEY POINTS:", "COMPLETENESS:")
-            ):
+            if first_para and not first_para.startswith(("SUMMARY:", "COMPLETENESS:")):
                 summary = first_para
             else:
                 summary = f"Analysis of the video transcript regarding: {question}"
 
-        if not points and segments:
-            # Create at least one point from the first relevant segment
-            points.append(
-                AnswerPoint(
-                    content="Relevant information found in the transcript",
-                    timestamp_seconds=segments[0]["start_time"],
-                )
-            )
-
-        return Answer(
+        return LlmAnswer(
             summary=summary,
-            points=points,
             not_addressed=not_addressed,
             model_id=self._active_model_id,
         )

@@ -1,4 +1,4 @@
-fastapi[standard]==0.115.12
+fastapi[standard]==0.115.9
 openai-whisper==20240930
 yt-dlp[default]==2025.4.30
 sentence-transformers==4.1.0

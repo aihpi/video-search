@@ -2,7 +2,6 @@ from enum import Enum
 from typing import List, Optional
 
 from app.models.camel_case import CamelCaseModel
-from app.models.llms import AnswerPoint
 
 
 class SearchType(str, Enum):
@@ -46,7 +45,6 @@ class SemanticSearchResponse(BaseSearchResponse):
 class LLMSearchResponse(BaseSearchResponse):
     search_type: SearchType = SearchType.LLM
     summary: str
-    points: List[AnswerPoint]
     not_addressed: bool
     model_id: str
 

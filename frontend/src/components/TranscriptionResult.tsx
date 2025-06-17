@@ -7,6 +7,7 @@ import {
 } from "../types/search.types";
 import { queryTranscript } from "../services/api";
 import { LoadingIndicatorButton } from "./LoadingIndicatorButton";
+import LLMDropdown from "./LLMDropdown";
 import type { LlmAnswer } from "../types/search.types";
 
 interface TranscriptionResultProps {
@@ -103,7 +104,6 @@ const TranscriptionResult: React.FC<TranscriptionResultProps> = ({
         setLlmResults(response.results);
         setLlmAnswer({
           summary: response.summary,
-          points: response.points,
           notAddressed: response.notAddressed,
           modelId: response.modelId,
         });
@@ -238,35 +238,20 @@ const TranscriptionResult: React.FC<TranscriptionResultProps> = ({
             )}
           </div>
 
+          {/* LLM Model Selection - Only shown for AI Synthesis */}
+          {activeTab === "llm" && (
+            <div className="mb-4">
+              <LLMDropdown
+                onError={(error) => setError(error?.message || null)}
+              />
+            </div>
+          )}
+
           {/* LLM Answer Display */}
           {activeTab === "llm" && llmAnswer && (
             <div className="mb-4 p-4 bg-blue-50 rounded-md border border-blue-200">
               <h3 className="font-semibold text-lg mb-2">AI Summary</h3>
               <p className="text-gray-700 mb-3">{llmAnswer.summary}</p>
-
-              {llmAnswer.points.length > 0 && (
-                <div>
-                  <h4 className="font-medium text-sm text-gray-600 mb-1">
-                    Key Points:
-                  </h4>
-                  <ul className="space-y-1">
-                    {llmAnswer.points.map((point, index) => (
-                      <li
-                        key={index}
-                        className="flex items-start cursor-pointer hover:bg-blue-100 p-1 rounded"
-                        onClick={() =>
-                          onSeekToTime && onSeekToTime(point.timestamp)
-                        }
-                      >
-                        <span className="text-blue-600 text-sm mr-2">
-                          [{formatTime(point.timestamp)}]
-                        </span>
-                        <span className="text-sm">{point.text}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
 
               {llmAnswer.notAddressed && (
                 <p className="text-sm text-orange-600 mt-2">
