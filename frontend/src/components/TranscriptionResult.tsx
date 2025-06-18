@@ -278,14 +278,7 @@ const TranscriptionResult: React.FC<TranscriptionResultProps> = ({
                     {formatTime(result.startTime)} -{" "}
                     {formatTime(result.endTime)}
                   </span>
-                  <span
-                    className="px-2 py-1 rounded-md text-xs font-medium"
-                    style={{
-                      backgroundColor: result.relevanceScore
-                        ? `rgba(79, 70, 229, ${result.relevanceScore / 100})`
-                        : "transparent",
-                    }}
-                  >
+                  <span className="px-2 py-1 rounded-md text-xs font-medium">
                     {result.relevanceScore ? `${result.relevanceScore}%` : " "}
                   </span>
                 </div>
