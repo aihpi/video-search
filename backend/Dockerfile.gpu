@@ -1,0 +1,39 @@
+FROM nvidia/cuda:12.1-runtime-ubuntu22.04
+
+# Set environment variables
+# Prevent Python from writing .pyc files (bytecode cache files)
+ENV PYTHONDONTWRITEBYTECODE=1 
+# Prevent Python from buffering stdout and stderr (Prevents log messages from being lost if the container crashes)
+ENV PYTHONUNBUFFERED=1
+# Suppress interactive prompts during package installation
+ENV DEBIAN_FRONTEND=noninteractive 
+
+# Install system dependencies and Python
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    python3 \
+    python3-pip \
+    ffmpeg \
+    git \
+    && rm -rf /var/lib/apt/lists/* 
+
+# Set the working directory
+WORKDIR /app
+
+# Install CUDA-enabled PyTorch
+RUN pip install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+
+# Copy only requirements.txt to leverage Docker cache
+COPY requirements.txt .
+
+# Install Python dependencies
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy the rest of the application code
+COPY . .
+
+# Load default model to disk while building the image
+ARG DEFAULT_MODEL=small
+RUN python3 -c "import whisper; whisper.load_model('${DEFAULT_MODEL}')"
+
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "9091"]

@@ -13,7 +13,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 model_cache: Dict[str, whisper.Whisper] = {}
-DEFAULT_MODEL = "tiny"
+DEFAULT_MODEL = "small"
 
 
 def get_model(model_name: str = DEFAULT_MODEL) -> whisper.Whisper:
@@ -63,24 +63,84 @@ def download_video(video_url: str, output_path: str) -> None:
     """
     try:
         logger.info(f"Downloading video from URL: {video_url}")
-        subprocess.run(
-            ["yt-dlp", "-f", "best", "-o", output_path, video_url],
+        # Work around YouTube's recent API restrictions by downloading video+audio separately and merging
+        # Format: best video (≤720p) + best audio, fallback to best ≤720p, final fallback to any best
+        result = subprocess.run(
+            [
+                "yt-dlp",
+                "-f",
+                "bestvideo[height<=720]+bestaudio/best[height<=720]/best",
+                "-o",
+                output_path,
+                video_url,
+            ],
             check=True,
             capture_output=True,
+            text=True,
         )
-        return os.path.exists(output_path)
+        logger.info(f"yt-dlp completed. Output path: {output_path}")
+
+        # Check if file exists at expected location
+        if not os.path.exists(output_path):
+            # yt-dlp might have added an extension, let's check
+            output_dir = os.path.dirname(output_path)
+            output_basename = os.path.basename(output_path).split(".")[0]
+
+            # List all files in the temp directory that match our basename
+            matching_files = [
+                f for f in os.listdir(output_dir) if f.startswith(output_basename)
+            ]
+
+            if matching_files:
+                actual_file = os.path.join(output_dir, matching_files[0])
+                logger.info(f"Found downloaded file at: {actual_file}")
+                # Rename to our expected location
+                os.rename(actual_file, output_path)
+                logger.info(f"Renamed to expected location: {output_path}")
+            else:
+                logger.error(
+                    f"No files found matching pattern {output_basename}* in {output_dir}"
+                )
+                logger.error(f"Directory contents: {os.listdir(output_dir)}")
+                raise RuntimeError(f"Video file not created at expected location")
+
+        logger.info(f"Video downloaded successfully: {output_path}")
+        return True
     except subprocess.CalledProcessError as e:
-        logger.error(f"Error downloading video: {e}")
-        raise RuntimeError(f"Failed to download video: {e}")
+        logger.error(f"yt-dlp command failed with exit code {e.returncode}")
+        logger.error(f"yt-dlp stderr: {e.stderr}")
+        logger.error(f"yt-dlp stdout: {e.stdout}")
+        raise RuntimeError(f"Failed to download video from {video_url}")
+    except Exception as e:
+        logger.error(f"Unexpected error downloading video: {type(e).__name__}: {e}")
+        raise RuntimeError(f"Failed to download video from {video_url}")
 
 
-def process_video_sync(
+def _process_audio_and_transcribe(
+    video_path: str, audio_path: str, model_name: str, language: str
+) -> Dict:
+    """
+    Shared logic for audio extraction and transcription.
+    """
+    is_audio_extracted = extract_audio(video_path, audio_path)
+
+    if not is_audio_extracted:
+        logger.error(f"Failed to extract audio from {video_path}")
+        raise RuntimeError(f"Failed to extract audio from {video_path}")
+    logger.info(f"Audio extracted successfully: {audio_path}")
+
+    transcription_result = transcribe_audio(audio_path, model_name, language)
+    logger.info(f"Transcribed video successfully.")
+
+    return transcription_result
+
+
+def process_video_from_url(
     video_url: str, video_path: str, audio_path: str, model_name: str, language: str
 ) -> Dict:
     """
-    Synchronous function for processing a video to be run in the thread pool.
+    Process a video from URL by downloading, extracting audio, and transcribing.
     """
-
     try:
         is_video_downloaded = download_video(video_url, video_path)
 
@@ -90,21 +150,26 @@ def process_video_sync(
 
         logger.info(f"Video downloaded successfully: {video_path}")
 
-        is_audio_extracted = extract_audio(video_path, audio_path)
-
-        if not is_audio_extracted:
-            logger.error(f"Failed to extract audio from {video_path}")
-            raise RuntimeError(f"Failed to extract audio from {video_path}")
-        logger.info(f"Audio extracted successfully: {audio_path}")
-
-        transcription_result = transcribe_audio(audio_path, model_name, language)
-
-        logger.info(f"Transcribed video successfully.")
-
-        return transcription_result
+        return _process_audio_and_transcribe(video_path, audio_path, model_name, language)
 
     except Exception as e:
-        logger.error(f"Error processing video {id}: {e}")
+        logger.error(f"Error processing video from URL: {e}")
+        raise e
+
+
+def process_video_from_file(
+    video_path: str, audio_path: str, model_name: str, language: str
+) -> Dict:
+    """
+    Process a local video file by extracting audio and transcribing.
+    """
+    try:
+        logger.info(f"Processing local video file: {video_path}")
+
+        return _process_audio_and_transcribe(video_path, audio_path, model_name, language)
+
+    except Exception as e:
+        logger.error(f"Error processing local video: {e}")
         raise e
 
 

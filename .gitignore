@@ -4,6 +4,7 @@ __pycache__
 .python-version
 .DS_Store
 tmp
+chroma_db
 
 # Logs
 logs
