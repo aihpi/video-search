@@ -28,6 +28,7 @@ class LLMService:
     _active_model = None
     _active_tokenizer = None
     _device = "cuda" if torch.cuda.is_available() else "cpu"
+    _hf_token = None
 
     def __new__(cls):
         if cls._instance == None:
@@ -38,6 +39,7 @@ class LLMService:
     def _initialize(self):
         self._has_gpu = torch.cuda.is_available()
 
+        self._hf_token = os.getenv("HUGGINGFACE_HUB_TOKEN")
         self._register_available_models()
 
         default_model_id = os.getenv("DEFAULT_LLM", "tinyllama")
@@ -70,12 +72,14 @@ class LLMService:
             requires_gpu=False,
         )
 
-        self._register_model(
-            model_id="gemma-2b",
-            display_name="Gemma 2 (2B)",
-            hf_model_id="google/gemma-2-2b-it",
-            requires_gpu=False,
-        )
+        # Gated models- only register if HuggingFace token is available
+        if self._hf_token:
+            self._register_model(
+                model_id="gemma-2b",
+                display_name="Gemma 2 (2B)",
+                hf_model_id="google/gemma-2-2b-it",
+                requires_gpu=False,
+            )
 
         self._register_model(
             model_id="stablelm-2",
@@ -165,11 +169,8 @@ class LLMService:
                 model_kwargs["torch_dtype"] = torch.float32
                 model_kwargs["low_cpu_mem_usage"] = True
 
-            # Get HF token for gated models
-            hf_token = os.getenv("HUGGINGFACE_HUB_TOKEN")
-
             tokenizer = AutoTokenizer.from_pretrained(
-                model_info["hf_model_id"], trust_remote_code=True, token=hf_token
+                model_info["hf_model_id"], trust_remote_code=True, token=self._hf_token
             )
 
             if tokenizer.pad_token is None:
@@ -178,7 +179,7 @@ class LLMService:
             model = AutoModelForCausalLM.from_pretrained(
                 model_info["hf_model_id"],
                 trust_remote_code=True,
-                token=hf_token,
+                token=self._hf_token,
                 **model_kwargs,
             )
 

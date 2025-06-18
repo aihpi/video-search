@@ -94,7 +94,15 @@ Create a `.env` file in the backend directory:
 EMBEDDING_MODEL_NAME=sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
 CHROMA_DB_DIR=chroma_db
 COLLECTION_NAME=transcript_embeddings
+
+# Optional: HuggingFace token for accessing gated models
+# HUGGINGFACE_HUB_TOKEN=your_token_here
+
+# Optional: Set default LLM model 
+# DEFAULT_LLM=tinyllama
 ```
+
+**Note**: The `HUGGINGFACE_HUB_TOKEN` is optional. Most models in this demo are public and don't require authentication. You only need a token if you encounter authentication errors when loading specific models.
 
 ## API Endpoints
 
