@@ -75,6 +75,7 @@ const App: React.FC = () => {
             <TranscriptionResult
               transcriptionResponse={transcriptionResult}
               onSeekToTime={handleSeekToTime}
+              onError={handleError}
             />
           )}
         </div>

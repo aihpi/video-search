@@ -8,6 +8,7 @@ import uvicorn
 from app.routes.transcription import transcription_router, executor
 from app.routes.search import search_router
 from app.routes.llms import llm_router
+from app.routes.summarization import summarization_router
 from app.services.transcription import get_model, model_cache
 
 logging.basicConfig(
@@ -55,6 +56,7 @@ app.add_middleware(
 app.include_router(transcription_router, prefix="/transcribe")
 app.include_router(search_router, prefix="/search")
 app.include_router(llm_router, prefix="/llms")
+app.include_router(summarization_router, prefix="/summarize")
 
 if __name__ == "__main__":
     uvicorn.run("app.main:app", host="0.0.0.0", port=9091, reload=True)

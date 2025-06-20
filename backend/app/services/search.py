@@ -102,6 +102,34 @@ class SearchService:
             logger.error(f"Failed to index transcript segments: {e}")
             raise
 
+    def get_transcript_text_by_id(self, transcript_id: str) -> Optional[str]:
+        """Retrieve the full text of a transcript by its ID by reconstructing from segments."""
+        try:
+            logger.info(f"Retrieving transcript text for ID: {transcript_id}")
+            where_filter = {"transcript_id": transcript_id}
+
+            results = self._collection.get(where=where_filter)
+            if not results or not results["documents"]:
+                logger.warning(f"No segments found for transcript ID: {transcript_id}")
+                return None
+
+            documents = results["documents"]
+            metadatas = results["metadatas"]
+
+            # Sort segments by start time to ensure proper order
+            segment_pairs = list(zip(documents, metadatas))
+            segment_pairs.sort(key=lambda x: x[1]["start_time"])
+
+            # Reconstruct full transcript by joining segments
+            full_transcript = " ".join([segment[0] for segment in segment_pairs])
+            
+            logger.info(f"Successfully reconstructed transcript for ID: {transcript_id}")
+            return full_transcript
+
+        except Exception as e:
+            logger.error(f"Failed to retrieve transcript text: {e}")
+            raise
+
     def query_transcript(
         self,
         question: str,
