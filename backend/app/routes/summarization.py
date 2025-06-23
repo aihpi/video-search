@@ -3,7 +3,7 @@ import logging
 from concurrent.futures import ThreadPoolExecutor
 from fastapi import APIRouter, HTTPException
 
-from app.services.llms import llm_service
+from app.services.summarization import summarize_transcript_by_id
 from app.models.summarization import SummarizationRequest, SummarizationResponse
 
 logging.basicConfig(
@@ -15,7 +15,6 @@ logger = logging.getLogger(__name__)
 
 summarization_router = APIRouter()
 
-# Thread pool for CPU-bound operations
 executor = ThreadPoolExecutor(max_workers=2)
 
 
@@ -23,7 +22,6 @@ executor = ThreadPoolExecutor(max_workers=2)
 async def summarize_transcript(request: SummarizationRequest):
     """
     Summarizes a transcript using an LLM.
-    This implementation calls the LLM service to generate the summary.
     """
     logger.info(
         f"Received summarization request for transcript ID: {request.transcript_id}"
@@ -34,9 +32,7 @@ async def summarize_transcript(request: SummarizationRequest):
     logger.info("Starting summarization...")
     try:
         summary = await asyncio.get_event_loop().run_in_executor(
-            executor,
-            llm_service.summarize_transcript_by_id,
-            request.transcript_id
+            executor, summarize_transcript_by_id, request.transcript_id
         )
         if summary is None:
             raise HTTPException(

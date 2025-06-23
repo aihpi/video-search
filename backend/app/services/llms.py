@@ -10,7 +10,6 @@ from dotenv import load_dotenv
 
 from app.models.llms import LlmAnswer, LlmInfo
 from app.models.search import QueryResult
-from app.services.search import search_service
 
 
 load_dotenv()
@@ -339,7 +338,7 @@ Answer:"""
             model_id=self._active_model_id,
         )
 
-    def _generate_summary(self, transcript: str, max_new_tokens: int = 512) -> str:
+    def generate_summary(self, transcript: str, max_new_tokens: int = 512) -> str:
         prompt = f"""You are an AI assistant tasked with summarizing a video transcript.
 Here is the transcript:
 {transcript}
@@ -364,33 +363,6 @@ Please provide a concise summary of the main points in 2-3 sentences."""
             outputs[0][inputs["input_ids"].shape[1] :], skip_special_tokens=True
         )
         return response.strip()
-
-    def summarize_transcript_by_id(
-        self, transcript_id: str, max_new_tokens: int = 512
-    ) -> Optional[str]:
-        """Generate a summary of the entire transcript by its ID."""
-
-        try:
-            logger.info(f"Generating summary for transcript ID: {transcript_id}")
-
-            # Get the full transcript text from search service
-            transcript_text = search_service.get_transcript_text_by_id(transcript_id)
-
-            if not transcript_text:
-                logger.warning(f"No transcript found for ID: {transcript_id}")
-                return None
-
-            # Generate summary using existing method
-            summary = self._generate_summary(transcript_text, max_new_tokens)
-
-            logger.info(
-                f"Successfully generated summary for transcript ID: {transcript_id}"
-            )
-            return summary
-
-        except Exception as e:
-            logger.error(f"Failed to generate transcript summary: {e}")
-            raise
 
     def get_available_models(self) -> List[LlmInfo]:
         """Get list of available models with their current status."""
