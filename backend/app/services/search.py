@@ -114,7 +114,7 @@ class SearchService:
         )
 
         if search_type == SearchType.KEYWORD:
-            return self._keyword_search(question, transcript_id)
+            return self._keyword_search(question, transcript_id, top_k)
         elif search_type == SearchType.SEMANTIC:
             return self._semantic_search(question, transcript_id, top_k)
         elif search_type == SearchType.LLM:
@@ -126,7 +126,7 @@ class SearchService:
             return self._keyword_search(question, transcript_id, top_k)
 
     def _keyword_search(
-        self, question: str, transcript_id: Optional[str]
+        self, question: str, transcript_id: Optional[str], top_k: Optional[int] = None
     ) -> KeywordSearchResponse:
         """Perform a keyword search on transcript segments."""
 
@@ -147,16 +147,21 @@ class SearchService:
             documents = results["documents"]
             metadatas = results["metadatas"]
 
-            # Filter documents based on keyword match
-            filtered_documents = [
-                doc for doc in documents if question.lower() in doc.lower()
+            # Filter documents based on keyword match and keep track of indices
+            filtered_results = [
+                (i, doc)
+                for i, doc in enumerate(documents)
+                if question.lower() in doc.lower()
             ]
 
-            if not filtered_documents:
+            if not filtered_results:
                 logger.warning(f"No keyword matches found for question: {question}")
                 return KeywordSearchResponse(
                     question=question, transcript_id=transcript_id, results=[]
                 )
+
+            if top_k:
+                filtered_results = filtered_results[:top_k]
 
             query_results = [
                 QueryResult(
@@ -167,7 +172,7 @@ class SearchService:
                     transcript_id=metadatas[i]["transcript_id"],
                     relevance_score=None,
                 )
-                for i, document in enumerate(filtered_documents)
+                for i, document in filtered_results
             ]
 
             logger.info(
