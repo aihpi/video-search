@@ -4,3 +4,6 @@ numpy
 librosa
 matplotlib
 pyqtgraph
+nltk
+tiktoken
+torch
