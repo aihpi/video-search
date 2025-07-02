@@ -6,3 +6,4 @@ chromadb==1.0.9
 hf-xet==1.1.1
 accelerate==1.7.0
 bitsandbytes==0.42.0
+openai==1.91.0

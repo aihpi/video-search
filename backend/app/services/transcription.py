@@ -2,6 +2,7 @@ import os
 import logging
 import subprocess
 import asyncio
+import torch
 import whisper
 from typing import Dict
 
@@ -22,7 +23,9 @@ def get_model(model_name: str = DEFAULT_MODEL) -> whisper.Whisper:
             logger.info(
                 f"Model not found in cache. Loading Whisper {model_name} model."
             )
-            model_cache[model_name] = whisper.load_model(model_name)
+            device = "cuda" if torch.cuda.is_available() else "cpu"
+            logger.info(f"Loading model on {device}")
+            model_cache[model_name] = whisper.load_model(model_name, device=device)
         return model_cache[model_name]
     except Exception as e:
         logger.error(f"Error loading model: {e}")
@@ -150,7 +153,9 @@ def process_video_from_url(
 
         logger.info(f"Video downloaded successfully: {video_path}")
 
-        return _process_audio_and_transcribe(video_path, audio_path, model_name, language)
+        return _process_audio_and_transcribe(
+            video_path, audio_path, model_name, language
+        )
 
     except Exception as e:
         logger.error(f"Error processing video from URL: {e}")
@@ -166,7 +171,9 @@ def process_video_from_file(
     try:
         logger.info(f"Processing local video file: {video_path}")
 
-        return _process_audio_and_transcribe(video_path, audio_path, model_name, language)
+        return _process_audio_and_transcribe(
+            video_path, audio_path, model_name, language
+        )
 
     except Exception as e:
         logger.error(f"Error processing local video: {e}")
