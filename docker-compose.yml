@@ -1,4 +1,16 @@
 services:
+  # Ollama service for LLM
+  ollama:
+    image: ollama/ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    profiles:
+      - cpu
+      - default
+      - gpu
+
   # CPU version
   app-cpu:
     build:
@@ -8,6 +20,10 @@ services:
       - "9091:9091"
     env_file:
       - ./backend/.env
+    environment:
+      - OLLAMA_BASE_URL=http://ollama:11434/v1
+    depends_on:
+      - ollama
     profiles:
       - cpu
       - default
@@ -21,6 +37,10 @@ services:
       - "9091:9091"
     env_file:
       - ./backend/.env
+    environment:
+      - OLLAMA_BASE_URL=http://ollama:11434/v1
+    depends_on:
+      - ollama
     runtime: nvidia
     profiles:
       - gpu
@@ -35,3 +55,6 @@ services:
       - cpu
       - default
       - gpu
+
+volumes:
+  ollama_data:
