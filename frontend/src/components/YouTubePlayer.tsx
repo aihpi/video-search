@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useImperativeHandle, forwardRef } from "react";
+import { useEffect, useRef, useImperativeHandle, forwardRef } from "react";
 
 interface YouTubePlayerProps {
   videoId: string;
@@ -52,7 +52,7 @@ const YouTubePlayer = forwardRef<YouTubePlayerHandle, YouTubePlayerProps>(
             width: width,
             videoId: videoId,
             playerVars: {
-              'playsinline': 1
+              playsinline: 1,
             },
           });
         }
