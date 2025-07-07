@@ -6,43 +6,32 @@ A machine learning workshop demo showcasing progressively sophisticated methods 
 
 This application allows users to:
 
-- Transcribe YouTube videos using OpenAI Whisper
+- Transcribe YouTube videos and uploaded video files using OpenAI Whisper
 - Search through video content using multiple search paradigms
 - Navigate directly to relevant video segments with click-to-seek functionality
+- Use LLMs to synthesize answers from video content
 
 ## Search Methods (Progressive Sophistication)
 
 ### 1. ✅ Keyword Search
 
-- **Status**: Implemented
 - **Description**: Simple text matching within transcript segments
 - **Use Case**: Finding exact phrases or specific terms mentioned in the video
 
 ### 2. ✅ Semantic Search
 
-- **Status**: Implemented
 - **Description**: Vector similarity search using multilingual sentence embeddings
 - **Technology**: Uses `paraphrase-multilingual-MiniLM-L12-v2` embeddings stored in ChromaDB
 - **Use Case**: Finding conceptually related content even when exact words don't match
 
-### 3. ⚠️ LLM Synthesis
+### 3. ✅ LLM Synthesis
 
-- **Status**: Infrastructure ready, implementation pending
+
 - **Description**: Uses Large Language Models to synthesize coherent answers from semantic search results
+- **Technology**: Supports Ollama (local) or vLLM (production) backends
 - **Use Case**: Getting comprehensive answers that combine information from multiple video segments
 
-### 4. 🔜 Vision-Language Model (VLM) Search
 
-- **Status**: Planned
-- **Description**: Search through visual content of videos using VLMs
-- **Use Case**: Finding specific visual elements, scenes, or objects in videos
-
-### 5. 🔜 Advanced Search Methods
-
-Additional sophisticated approaches to explore:
-
-- **Multi-modal Re-ranking**: Use cross-encoders to improve search result relevance
-- **Cross-lingual Search**: Query in one language, find results in another
 
 ## Tech Stack
 
@@ -54,6 +43,7 @@ Additional sophisticated approaches to explore:
 - **Sentence Transformers**: Multilingual embeddings
 - **yt-dlp**: YouTube video downloading
 - **FFmpeg**: Audio extraction
+- **Ollama/vLLM**: LLM inference backends
 
 ### Frontend
 
@@ -64,53 +54,203 @@ Additional sophisticated approaches to explore:
 
 ## Getting Started
 
+### Option 1: Docker Setup (Recommended)
+
+#### Prerequisites for Docker
+- **Docker** and **Docker Compose** installed
+- **NVIDIA Container Toolkit** (for GPU support, optional)
+
+#### Running with Docker
+
+1. Clone the repository:
+```bash
+git clone <repository-url>
+cd video-search
+```
+
+2. Run the application:
+```bash
+./run.sh
+```
+
+This script will:
+- Detect if you have a GPU and use the appropriate profile
+- Start all services (backend, frontend, Ollama)
+- Pull the required LLM model (qwen3:8b) on first run
+- Open the application at http://localhost:5173
+
+To stop all services, press `Ctrl+C`.
+
+### Option 2: Local Setup (Without Docker)
+
 ### Prerequisites
 
-- Python 3.10+
-- Node.js 16+
-- FFmpeg installed on your system
+#### Required Software
+- **Python 3.10+** (3.12 recommended)
+- **FFmpeg** (for audio extraction)
+- **Ollama** (for LLM functionality)
+- **Node.js 18+** and npm
+- **Git** (for cloning the repository)
 
-### Backend Setup
+#### Installation Verification
+
+Verify all prerequisites are installed:
+
+```bash
+# Check Python version
+python --version  # Should show 3.10 or higher
+
+# Check Node.js and npm
+node --version   # Should show v18 or higher
+npm --version
+
+# Check FFmpeg
+ffmpeg -version  # Should show FFmpeg version info
+
+# Check Git
+git --version
+
+# Check Ollama (after installation)
+ollama --version
+```
+
+### Installing Prerequisites
+
+#### macOS
+```bash
+# Using Homebrew
+brew install python@3.12 node ffmpeg
+brew install --cask ollama
+
+# Start Ollama
+ollama serve
+```
+
+#### Ubuntu/Debian
+```bash
+# Update package list
+sudo apt update
+
+# Install Python and pip
+sudo apt install python3.12 python3-pip
+
+# Install Node.js (via NodeSource)
+curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+sudo apt install nodejs
+
+# Install FFmpeg
+sudo apt install ffmpeg
+
+# Install Ollama
+curl -fsSL https://ollama.com/install.sh | sh
+```
+
+#### Windows (using WSL2)
+1. Install WSL2 following [Microsoft's guide](https://docs.microsoft.com/en-us/windows/wsl/install)
+2. Open WSL2 terminal and follow Ubuntu instructions above
+
+### Project Setup
+
+#### 1. Clone the Repository
+```bash
+git clone <repository-url>
+cd video-search
+```
+
+#### 2. Backend Setup
 
 ```bash
 cd backend
+
+# Create virtual environment (recommended)
+python -m venv venv
+
+# Activate virtual environment
+# On macOS/Linux:
+source venv/bin/activate
+# On Windows:
+# venv\Scripts\activate
+
+# Install dependencies
 pip install -r requirements.txt
-uvicorn app.main:app --reload
+
+# Run the backend server (IMPORTANT: Use this exact command)
+python -m app.main
 ```
 
-### Frontend Setup
+The backend will start on **http://localhost:9091**
+
+#### 3. Frontend Setup
+
+Open a new terminal window:
 
 ```bash
 cd frontend
+
+# Install dependencies
 npm install
+
+# Start development server
 npm run dev
 ```
 
-### Environment Variables
+The frontend will start on **http://localhost:5173**
 
-Create a `.env` file in the backend directory:
+### 4. Environment Configuration (Optional)
 
+The application works with sensible defaults. You only need a `.env` file if you want to customize the configuration.
+
+**Default Configuration (no .env needed):**
+- LLM Backend: Ollama on http://localhost:11434
+- Default Model: qwen3:8b
+- Embedding Model: paraphrase-multilingual-MiniLM-L12-v2
+- Database: ./chroma_db
+
+**To customize configuration:**
+
+```bash
+cd backend
+cp .env.example .env
+# Edit .env with your preferred settings
 ```
-EMBEDDING_MODEL_NAME=sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
-CHROMA_DB_DIR=chroma_db
-COLLECTION_NAME=transcript_embeddings
 
-# Optional: HuggingFace token for accessing gated models
-# HUGGINGFACE_HUB_TOKEN=your_token_here
+Example `.env` for customization:
+```bash
+# Use a different LLM model
+LLM_MODEL=llama3.2:3b
 
-# Optional: Set default LLM model 
-# DEFAULT_LLM=tinyllama
+# Or use vLLM instead of Ollama
+LLM_BACKEND=vllm
+VLLM_BASE_URL=http://localhost:8000/v1
 ```
 
-**Note**: The `HUGGINGFACE_HUB_TOKEN` is optional. Most models in this demo are public and don't require authentication. You only need a token if you encounter authentication errors when loading specific models.
+### 5. Download LLM Model
+
+Before using LLM synthesis, download a model with Ollama:
+
+```bash
+# Pull the default model
+ollama pull qwen3:8b
+
+# Or choose a smaller model for limited resources
+ollama pull llama3.2:3b
+```
 
 ## API Endpoints
 
-- `POST /transcribe-video`: Transcribe a YouTube video
-- `POST /query-transcript`: Search through transcribed content
-- `GET /models`: List available LLM models (for synthesis)
-- `POST /select-model`: Select an LLM model
-- `POST /llm-answer`: Generate synthesized answers (coming soon)
+### Transcription
+- `POST /transcribe/video-url`: Transcribe a YouTube video from URL
+- `POST /transcribe/video-file`: Transcribe an uploaded video file
+- `GET /transcribe/audio/{filename}`: Get extracted audio file
+
+### Search
+- `POST /search/keyword`: Keyword search in transcripts
+- `POST /search/semantic`: Semantic similarity search
+- `POST /search/llm`: LLM-synthesized answers from search results
+
+### LLM Management
+- `GET /llms/models`: List available LLM models
+- `POST /llms/select`: Select active LLM model
 
 ## Current Issues and TODOs
 
