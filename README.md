@@ -13,25 +13,22 @@ This application allows users to:
 
 ## Search Methods (Progressive Sophistication)
 
-### 1. ✅ Keyword Search
+### 1. Keyword Search
 
 - **Description**: Simple text matching within transcript segments
 - **Use Case**: Finding exact phrases or specific terms mentioned in the video
 
-### 2. ✅ Semantic Search
+### 2. Semantic Search
 
 - **Description**: Vector similarity search using multilingual sentence embeddings
 - **Technology**: Uses `paraphrase-multilingual-MiniLM-L12-v2` embeddings stored in ChromaDB
 - **Use Case**: Finding conceptually related content even when exact words don't match
 
-### 3. ✅ LLM Synthesis
-
+### 3. LLM Synthesis
 
 - **Description**: Uses Large Language Models to synthesize coherent answers from semantic search results
 - **Technology**: Supports Ollama (local) or vLLM (production) backends
 - **Use Case**: Getting comprehensive answers that combine information from multiple video segments
-
-
 
 ## Tech Stack
 
@@ -50,30 +47,39 @@ This application allows users to:
 - **React + TypeScript**: UI framework
 - **Vite**: Build tool
 - **Tailwind CSS**: Styling
-- **Vitest**: Testing framework
 
 ## Getting Started
 
 ### Option 1: Docker Setup (Recommended)
 
 #### Prerequisites for Docker
+
 - **Docker** and **Docker Compose** installed
 - **NVIDIA Container Toolkit** (for GPU support, optional)
 
 #### Running with Docker
 
 1. Clone the repository:
+
 ```bash
 git clone <repository-url>
 cd video-search
 ```
 
-2. Run the application:
+2. Copy the example environment file:
+
+```bash
+cp backend/.env.example backend/.env
+```
+
+3. Run the application:
+
 ```bash
 ./run.sh
 ```
 
 This script will:
+
 - Detect if you have a GPU and use the appropriate profile
 - Start all services (backend, frontend, Ollama)
 - Pull the required LLM model (qwen3:8b) on first run
@@ -86,6 +92,7 @@ To stop all services, press `Ctrl+C`.
 ### Prerequisites
 
 #### Required Software
+
 - **Python 3.10+** (3.12 recommended)
 - **FFmpeg** (for audio extraction)
 - **Ollama** (for LLM functionality)
@@ -117,6 +124,7 @@ ollama --version
 ### Installing Prerequisites
 
 #### macOS
+
 ```bash
 # Using Homebrew
 brew install python@3.12 node ffmpeg
@@ -127,6 +135,7 @@ ollama serve
 ```
 
 #### Ubuntu/Debian
+
 ```bash
 # Update package list
 sudo apt update
@@ -146,12 +155,14 @@ curl -fsSL https://ollama.com/install.sh | sh
 ```
 
 #### Windows (using WSL2)
+
 1. Install WSL2 following [Microsoft's guide](https://docs.microsoft.com/en-us/windows/wsl/install)
 2. Open WSL2 terminal and follow Ubuntu instructions above
 
 ### Project Setup
 
 #### 1. Clone the Repository
+
 ```bash
 git clone <repository-url>
 cd video-search
@@ -201,6 +212,7 @@ The frontend will start on **http://localhost:5173**
 The application works with sensible defaults. You only need a `.env` file if you want to customize the configuration.
 
 **Default Configuration (no .env needed):**
+
 - LLM Backend: Ollama on http://localhost:11434
 - Default Model: qwen3:8b
 - Embedding Model: paraphrase-multilingual-MiniLM-L12-v2
@@ -215,6 +227,7 @@ cp .env.example .env
 ```
 
 Example `.env` for customization:
+
 ```bash
 # Use a different LLM model
 LLM_MODEL=llama3.2:3b
@@ -239,16 +252,19 @@ ollama pull llama3.2:3b
 ## API Endpoints
 
 ### Transcription
+
 - `POST /transcribe/video-url`: Transcribe a YouTube video from URL
 - `POST /transcribe/video-file`: Transcribe an uploaded video file
 - `GET /transcribe/audio/{filename}`: Get extracted audio file
 
 ### Search
+
 - `POST /search/keyword`: Keyword search in transcripts
 - `POST /search/semantic`: Semantic similarity search
 - `POST /search/llm`: LLM-synthesized answers from search results
 
 ### LLM Management
+
 - `GET /llms/models`: List available LLM models
 - `POST /llms/select`: Select active LLM model
 
