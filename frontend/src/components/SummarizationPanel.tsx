@@ -43,7 +43,6 @@ const SummarizationPanel: React.FC<SummarizationPanelProps> = ({
           buttonText="Generate Summary"
           onClick={handleSummarize}
           disabled={isLoading}
-          className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
         />
       </div>
 
@@ -58,7 +57,10 @@ const SummarizationPanel: React.FC<SummarizationPanelProps> = ({
 
       {!summary && !isLoading && (
         <div className="mt-4 text-center text-gray-500">
-          <p>Click "Generate Summary" to get an AI-powered summary of the entire transcript.</p>
+          <p>
+            Click "Generate Summary" to get an AI-powered summary of the entire
+            transcript.
+          </p>
         </div>
       )}
     </div>

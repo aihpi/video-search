@@ -4,7 +4,7 @@ from concurrent.futures import ThreadPoolExecutor
 from fastapi import APIRouter, HTTPException
 
 from app.services.summarization import summarize_transcript_by_id
-from app.models.summarization import SummarizationRequest
+from app.models.summarization import SummarizationRequest, SummarizationResponse
 
 logging.basicConfig(
     level=logging.INFO,
@@ -18,10 +18,10 @@ summarization_router = APIRouter()
 executor = ThreadPoolExecutor(max_workers=2)
 
 
-@summarization_router.post("/transcript")
+@summarization_router.post("/transcript", response_model=SummarizationResponse)
 async def summarize_transcript(request: SummarizationRequest):
     """
-    Summarizes a transcript using an LLM.
+    Summarizes a video transcript using an LLM.
     """
     logger.info(
         f"Received summarization request for transcript ID: {request.transcript_id}"
@@ -32,7 +32,10 @@ async def summarize_transcript(request: SummarizationRequest):
     logger.info("Starting summarization...")
     try:
         summary = await asyncio.get_event_loop().run_in_executor(
-            executor, summarize_transcript_by_id, request.transcript_id
+            executor, 
+            summarize_transcript_by_id, 
+            request.transcript_id,
+            request.max_length
         )
         if summary is None:
             raise HTTPException(
@@ -47,5 +50,5 @@ async def summarize_transcript(request: SummarizationRequest):
             status_code=500, detail="Internal server error during summarization"
         )
 
-    logger.info(f"Summarization completed successfully: {summary}")
-    return summary
+    logger.info("Summarization completed successfully")
+    return SummarizationResponse(summary=summary)

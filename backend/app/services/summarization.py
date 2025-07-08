@@ -1,14 +1,10 @@
 import os
+import re
 import logging
-import json
 from openai import OpenAI
 from dotenv import load_dotenv
-from typing import List, Dict, Any
 
 from app.services.search import search_service
-from app.models.summarization import (
-    SUMMARY_TEMPLATE,
-)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -40,31 +36,37 @@ client = OpenAI(
 )
 
 
-def create_prompt(transcript_text: str, template: Dict[str, Any]) -> str:
-    """Create a structured prompt for Ollama."""
-    return f"""Du bist ein Experte für die Erstellung von Sitzungsniederschriften nach brandenburgischer Kommunalverfassung.
+def create_prompt(transcript_text: str, max_length: int = None) -> str:
+    """Create a prompt for video summarization."""
+    length_instruction = ""
+    if max_length:
+        length_instruction = (
+            f"\nThe summary should be approximately {max_length} words long."
+        )
 
-DEINE AUFGABE:
-Analysiere das folgende Transkript einer Gemeinderatssitzung und erstelle eine strukturierte Niederschrift im JSON-Format.
+    return f"""You are an expert at summarizing video transcripts. Your task is to create a clear, comprehensive summary that captures the main points, key insights, and important details from the video.
 
-WICHTIGE REGELN:
-1. Extrahiere ALLE Informationen gemäß der vorgegebenen JSON-Struktur
-2. Anträge und Beschlüsse müssen VOLLSTÄNDIG und WÖRTLICH übernommen werden
-3. Fülle alle Felder aus - wenn Information fehlt, nutze "nicht erfasst" oder "keine"
-4. Achte auf korrekte Rechtschreibung und formale Sprache
-5. Das Ergebnis MUSS valides JSON sein
+Please analyze the following video transcript and provide a well-structured summary that:
+1. Identifies the main topic or theme
+2. Highlights key points and important information
+3. Captures any conclusions or takeaways
+4. Maintains the original context and meaning
+5. Is written in a clear, concise manner{length_instruction}
 
-JSON-VORLAGE:
-{json.dumps(template, ensure_ascii=False, indent=2)}
+IMPORTANT OUTPUT REQUIREMENTS:
+- Write in plain text without any markdown formatting (no **, *, #, etc.)
+- Do NOT include "Summary:" or "SUMMARY:" at the beginning
+- Do NOT use bullet points or numbered lists
+- Write in paragraph form with clear transitions between ideas
+- Start directly with the content (e.g., "This video discusses...")
+- Output ONLY the final summary text, nothing else
 
-TRANSKRIPT:
-{transcript_text}
-
-AUSGABE:
-Gib NUR das ausgefüllte JSON zurück, ohne zusätzlichen Text."""
+TRANSCRIPT:
+{transcript_text}"""
 
 
-def summarize_transcript_by_id(transcript_id: str):
+def summarize_transcript_by_id(transcript_id: str, max_length: int = None) -> str:
+    """Generate a summary for a video transcript."""
     try:
         logger.info(f"Generating summary for transcript ID: {transcript_id}")
 
@@ -75,23 +77,23 @@ def summarize_transcript_by_id(transcript_id: str):
             logger.warning(f"No transcript found for ID: {transcript_id}")
             return None
 
-        prompt = create_prompt(transcript_text, SUMMARY_TEMPLATE)
+        prompt = create_prompt(transcript_text, max_length)
 
-        summary_data = call_ollama(prompt)
+        summary = call_llm(prompt)
 
         logger.info(
             f"Successfully generated summary for transcript ID: {transcript_id}"
         )
 
-        return summary_data
+        return summary
 
     except Exception as e:
         logger.error(f"Failed to generate transcript summary: {e}")
         raise
 
 
-def call_ollama(prompt: str) -> Dict[str, Any]:
-    """Call LLM API using OpenAI client and parse JSON response."""
+def call_llm(prompt: str) -> str:
+    """Call LLM API using OpenAI client for text generation."""
     try:
         # Use chat completion API
         response = client.chat.completions.create(
@@ -99,65 +101,30 @@ def call_ollama(prompt: str) -> Dict[str, Any]:
             messages=[
                 {
                     "role": "system",
-                    "content": "You are a helpful assistant that always responds with valid JSON.",
+                    "content": "You are a helpful assistant that creates clear, concise summaries of video transcripts. Output only the requested summary content.",
                 },
                 {"role": "user", "content": prompt},
             ],
-            temperature=0.1,  # Very low for consistent output
+            temperature=0.3,  # Slightly higher for more natural summaries
             top_p=0.9,
-            max_tokens=4096,
-            seed=42,  # For reproducibility
+            max_tokens=1024,  # Reasonable limit for summaries
         )
 
-        # Extract the generated text
-        generated_text = response.choices[0].message.content
+        # Extract and return the generated text
+        summary = response.choices[0].message.content.strip()
 
-        # Try to parse JSON from the response
-        # Sometimes LLMs add markdown formatting, so we clean it
-        generated_text = generated_text.strip()
-        if generated_text.startswith("```json"):
-            generated_text = generated_text[7:]
-        if generated_text.endswith("```"):
-            generated_text = generated_text[:-3]
+        # Clean up any thinking tags or meta-commentary
+        if "<think>" in summary:
+            # Remove everything between <think> and </think>
+            summary = re.sub(
+                r"<think>.*?</think>", "", summary, flags=re.DOTALL
+            ).strip()
 
-        # Parse JSON
-        niederschrift_data = json.loads(generated_text.strip())
-        return niederschrift_data
+        # Remove any leading/trailing whitespace or empty lines
+        summary = summary.strip()
 
-    except json.JSONDecodeError as e:
-        logger.error(f"Failed to parse JSON from LLM response: {e}")
-        logger.error(f"Response text: {generated_text[:500]}...")
-        raise ValueError("Model did not return valid JSON")
+        return summary
+
     except Exception as e:
         logger.error(f"Failed to call LLM: {e}")
         raise
-
-
-def validate_summary(summary_data: Dict[str, Any]) -> List[str]:
-    """Basic validation of the generated Niederschrift."""
-    issues = []
-
-    required_fields = [
-        "organisation",
-        "sitzungsart",
-        "datum",
-        "ort",
-        "vorsitz",
-        "protokollfuehrung",
-        "anwesende",
-        "tagesordnung",
-    ]
-
-    for field in required_fields:
-        if field not in summary_data or not summary_data[field]:
-            issues.append(f"Fehlendes Pflichtfeld: {field}")
-
-    # Check if agenda items have required content
-    if "tagesordnung" in summary_data:
-        for idx, top in enumerate(summary_data["tagesordnung"]):
-            if not top.get("titel"):
-                issues.append(f"TOP {idx+1}: Titel fehlt")
-            if "oeffentlich" not in top:
-                issues.append(f"TOP {idx+1}: Öffentlichkeitsstatus fehlt")
-
-    return issues
