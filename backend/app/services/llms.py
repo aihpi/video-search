@@ -6,8 +6,8 @@ from typing import List, Optional
 from openai import OpenAI
 from dotenv import load_dotenv
 
-from ..models.llms import LlmAnswer, LlmInfo
-from ..models.search import QueryResult
+from app.models.llms import LlmAnswer, LlmInfo
+from app.models.search import QueryResult
 
 load_dotenv()
 
@@ -196,6 +196,32 @@ Remember: Start your response directly with "SUMMARY:" without any preamble."""
             not_addressed=not_addressed,
             model_id=self._model_id,
         )
+
+    def generate_summary(self, transcript: str, max_new_tokens: int = 512) -> str:
+        prompt = f"""You are an AI assistant tasked with summarizing a video transcript.
+Here is the transcript:
+{transcript}
+Please provide a concise summary of the main points in 2-3 sentences."""
+        inputs = self._active_tokenizer(
+            prompt, return_tensors="pt", truncation=True, max_length=2048
+        )
+        if (
+            self._device == "cuda"
+            and "device_map" not in self._models[self._active_model_id]
+        ):
+            inputs = inputs.to(self._device)
+        with torch.no_grad():
+            outputs = self._active_model.generate(
+                **inputs,
+                max_new_tokens=max_new_tokens,
+                temperature=0.7,
+                do_sample=True,
+                top_p=0.9,
+            )
+        response = self._active_tokenizer.decode(
+            outputs[0][inputs["input_ids"].shape[1] :], skip_special_tokens=True
+        )
+        return response.strip()
 
     def get_available_models(self) -> List[LlmInfo]:
         """Get list of available models (just the configured one)."""

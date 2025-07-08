@@ -17,6 +17,11 @@ import type {
   LlmSelectResponse,
 } from "../types/llms.types";
 
+import type {
+  SummarizationRequest,
+  SummarizationResponse,
+} from "../types/summarization.types";
+
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:9091";
 
 const apiClient = axios.create({
@@ -137,6 +142,25 @@ export const selectLlm = async (
     return response.data;
   } catch (error) {
     console.error(`Error selecting model ${modelId}`, error);
+    throw error;
+  }
+};
+
+export const summarizeTranscript = async (
+  transcriptId: string
+): Promise<SummarizationResponse> => {
+  const requestBody: SummarizationRequest = {
+    transcriptId,
+  };
+
+  try {
+    const response = await apiClient.post<SummarizationResponse>(
+      "/summarize/transcript",
+      requestBody
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Error during summarization:", error);
     throw error;
   }
 };

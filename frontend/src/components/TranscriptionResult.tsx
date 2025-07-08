@@ -8,16 +8,19 @@ import {
 import { queryTranscript } from "../services/api";
 import { LoadingIndicatorButton } from "./LoadingIndicatorButton";
 import LLMDropdown from "./LLMDropdown";
+import SummarizationPanel from "./SummarizationPanel";
 import type { LlmAnswer } from "../types/search.types";
 
 interface TranscriptionResultProps {
   transcriptionResponse: TranscriptionResponse;
   onSeekToTime?: (seconds: number) => void;
+  onError?: (error: Error | null) => void;
 }
 
 const TranscriptionResult: React.FC<TranscriptionResultProps> = ({
   transcriptionResponse,
   onSeekToTime,
+  onError,
 }) => {
   const [question, setQuestion] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -296,6 +299,11 @@ const TranscriptionResult: React.FC<TranscriptionResultProps> = ({
             )}
         </div>
       </div>
+
+      <SummarizationPanel
+        transcriptId={transcriptionResponse.id}
+        onError={onError || (() => {})}
+      />
     </div>
   );
 };
