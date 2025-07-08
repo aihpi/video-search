@@ -31,7 +31,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Load default model to disk while building the image
-ARG DEFAULT_MODEL=tiny
+ARG DEFAULT_MODEL=small
 RUN python -c "import whisper; whisper.load_model('${DEFAULT_MODEL}')"
 
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "9091"]

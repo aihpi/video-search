@@ -1,3 +1,4 @@
+// Transcription
 export type WhisperModelType =
   | "tiny"
   | "base"
@@ -8,12 +9,12 @@ export type WhisperModelType =
 
 export type TranscriptionRequest = {
   videoUrl: string;
-  language?: string;
+  language?: string | null;
   model?: WhisperModelType;
 };
 
 export type TranscriptSegment = {
-  id: number;
+  id: string;
   start: number;
   end: number;
   text: string;
