@@ -1,16 +1,8 @@
-from pydantic import BaseModel, ConfigDict, HttpUrl
-from pydantic.alias_generators import to_camel
+from pydantic import BaseModel, HttpUrl
 from typing import List, Literal, Optional
 
 from app.services.transcription import DEFAULT_MODEL
-
-
-class CamelCaseModel(BaseModel):
-    model_config = ConfigDict(
-        alias_generator=to_camel,
-        populate_by_name=True,
-        from_attributes=True,
-    )
+from app.models.camel_case import CamelCaseModel
 
 
 class TranscriptionRequest(CamelCaseModel):
@@ -20,10 +12,16 @@ class TranscriptionRequest(CamelCaseModel):
 
 
 class TranscriptSegment(CamelCaseModel):
-    id: int
+    id: str
     start: float
     end: float
     text: str
+
+
+class Transcript(BaseModel):
+    id: str
+    text: str
+    segments: List[TranscriptSegment]
 
 
 class TranscriptionResponse(CamelCaseModel):
