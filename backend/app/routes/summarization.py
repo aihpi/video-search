@@ -32,10 +32,9 @@ async def summarize_transcript(request: SummarizationRequest):
     logger.info("Starting summarization...")
     try:
         summary = await asyncio.get_event_loop().run_in_executor(
-            executor, 
-            summarize_transcript_by_id, 
+            executor,
+            summarize_transcript_by_id,
             request.transcript_id,
-            request.max_length
         )
         if summary is None:
             raise HTTPException(

@@ -36,13 +36,8 @@ client = OpenAI(
 )
 
 
-def create_prompt(transcript_text: str, max_length: int = None) -> str:
+def create_prompt(transcript_text: str) -> str:
     """Create a prompt for video summarization."""
-    length_instruction = ""
-    if max_length:
-        length_instruction = (
-            f"\nThe summary should be approximately {max_length} words long."
-        )
 
     return f"""You are an expert at summarizing video transcripts. Your task is to create a clear, comprehensive summary that captures the main points, key insights, and important details from the video.
 
@@ -51,7 +46,7 @@ Please analyze the following video transcript and provide a well-structured summ
 2. Highlights key points and important information
 3. Captures any conclusions or takeaways
 4. Maintains the original context and meaning
-5. Is written in a clear, concise manner{length_instruction}
+5. Is written in a clear, concise manner
 
 IMPORTANT OUTPUT REQUIREMENTS:
 - Write in plain text without any markdown formatting (no **, *, #, etc.)
@@ -65,7 +60,7 @@ TRANSCRIPT:
 {transcript_text}"""
 
 
-def summarize_transcript_by_id(transcript_id: str, max_length: int = None) -> str:
+def summarize_transcript_by_id(transcript_id: str) -> str:
     """Generate a summary for a video transcript."""
     try:
         logger.info(f"Generating summary for transcript ID: {transcript_id}")
@@ -77,7 +72,7 @@ def summarize_transcript_by_id(transcript_id: str, max_length: int = None) -> st
             logger.warning(f"No transcript found for ID: {transcript_id}")
             return None
 
-        prompt = create_prompt(transcript_text, max_length)
+        prompt = create_prompt(transcript_text)
 
         summary = call_llm(prompt)
 
