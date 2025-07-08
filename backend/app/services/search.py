@@ -142,7 +142,7 @@ class SearchService:
         )
 
         if search_type == SearchType.KEYWORD:
-            return self._keyword_search(question, transcript_id)
+            return self._keyword_search(question, transcript_id, top_k)
         elif search_type == SearchType.SEMANTIC:
             return self._semantic_search(question, transcript_id, top_k)
         elif search_type == SearchType.LLM:
@@ -154,7 +154,7 @@ class SearchService:
             return self._keyword_search(question, transcript_id, top_k)
 
     def _keyword_search(
-        self, question: str, transcript_id: Optional[str]
+        self, question: str, transcript_id: Optional[str], top_k: Optional[int] = None
     ) -> KeywordSearchResponse:
         """Perform a keyword search on transcript segments."""
 
@@ -175,16 +175,21 @@ class SearchService:
             documents = results["documents"]
             metadatas = results["metadatas"]
 
-            # Filter documents based on keyword match
-            filtered_documents = [
-                doc for doc in documents if question.lower() in doc.lower()
+            # Filter documents based on keyword match and keep track of indices
+            filtered_results = [
+                (i, doc)
+                for i, doc in enumerate(documents)
+                if question.lower() in doc.lower()
             ]
 
-            if not filtered_documents:
+            if not filtered_results:
                 logger.warning(f"No keyword matches found for question: {question}")
                 return KeywordSearchResponse(
                     question=question, transcript_id=transcript_id, results=[]
                 )
+
+            if top_k:
+                filtered_results = filtered_results[:top_k]
 
             query_results = [
                 QueryResult(
@@ -195,7 +200,7 @@ class SearchService:
                     transcript_id=metadatas[i]["transcript_id"],
                     relevance_score=None,
                 )
-                for i, document in enumerate(filtered_documents)
+                for i, document in filtered_results
             ]
 
             logger.info(
@@ -270,26 +275,49 @@ class SearchService:
         """Use an LLM to synthesize an answer from semantic search results."""
 
         try:
+            # First, get semantic search results (for returning in response)
             semantic_search_response: SemanticSearchResponse = self._semantic_search(
                 question, transcript_id, top_k
             )
-            if not semantic_search_response.results:
-                logger.warning(
-                    f"No semantic results found for LLM synthesis: {question}"
-                )
+
+            # Second, get all segments for the transcript (for LLM context)
+            where_filter = {"transcript_id": transcript_id} if transcript_id else None
+            all_segments_result = self._collection.get(where=where_filter)
+
+            if not all_segments_result or not all_segments_result["documents"]:
+                logger.warning(f"No transcript found for LLM synthesis: {question}")
                 return LLMSearchResponse(
                     question=question,
                     transcript_id=transcript_id,
                     results=[],
-                    summary="No relevant information found in the transcript.",
+                    summary="No transcript found.",
                     not_addressed=True,
                     model_id="none",
                 )
 
+            # Convert all segments to QueryResult format and sort by start time
+            all_segments = []
+            for i, doc in enumerate(all_segments_result["documents"]):
+                metadata = all_segments_result["metadatas"][i]
+                all_segments.append(
+                    QueryResult(
+                        segment_id=metadata["id"],
+                        start_time=metadata["start_time"],
+                        end_time=metadata["end_time"],
+                        text=doc,
+                        transcript_id=metadata["transcript_id"],
+                        relevance_score=None,
+                    )
+                )
+
+            # Sort by start time to maintain chronological order
+            all_segments.sort(key=lambda x: x.start_time)
+
             logger.info(f"Generating LLM synthesis for question: {question}")
-            answer: LlmAnswer = llm_service.generate_answer(
-                question, semantic_search_response.results
-            )
+            logger.info(f"Using {len(all_segments)} segments for full context")
+
+            # Pass all segments to LLM for synthesis
+            answer: LlmAnswer = llm_service.generate_answer(question, all_segments)
 
             answer_response = LLMSearchResponse(
                 question=question,
