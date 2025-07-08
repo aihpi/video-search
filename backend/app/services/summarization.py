@@ -1,7 +1,7 @@
 import os
 import logging
 import json
-from fastapi import requests
+from openai import OpenAI
 from dotenv import load_dotenv
 from typing import List, Dict, Any
 
@@ -18,8 +18,26 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 load_dotenv()
-OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+
+# LLM Backend configuration
+LLM_BACKEND = os.getenv("LLM_BACKEND", "ollama").lower()
+
+if LLM_BACKEND == "ollama":
+    BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434/v1")
+    API_KEY = "ollama"  # Ollama doesn't require API key
+elif LLM_BACKEND == "vllm":
+    BASE_URL = os.getenv("VLLM_BASE_URL", "http://localhost:8000/v1")
+    API_KEY = os.getenv("VLLM_API_KEY", "vllm")
+else:
+    raise ValueError(f"Unsupported LLM backend: {LLM_BACKEND}")
+
 MODEL_NAME = os.getenv("SUMMARIZATION_MODEL", "qwen3:8b")
+
+# Initialize OpenAI client
+client = OpenAI(
+    base_url=BASE_URL,
+    api_key=API_KEY,
+)
 
 
 def create_prompt(transcript_text: str, template: Dict[str, Any]) -> str:
@@ -73,27 +91,26 @@ def summarize_transcript_by_id(transcript_id: str):
 
 
 def call_ollama(prompt: str) -> Dict[str, Any]:
-    """Call Ollama API and parse JSON response."""
+    """Call LLM API using OpenAI client and parse JSON response."""
     try:
-        response = requests.post(
-            f"{OLLAMA_BASE_URL}/api/generate",
-            json={
-                "model": MODEL_NAME,
-                "prompt": prompt,
-                "stream": False,
-                "options": {
-                    "temperature": 0.1,  # Very low for consistent output
-                    "top_p": 0.9,
-                    "seed": 42,  # For reproducibility
+        # Use chat completion API
+        response = client.chat.completions.create(
+            model=MODEL_NAME,
+            messages=[
+                {
+                    "role": "system",
+                    "content": "You are a helpful assistant that always responds with valid JSON.",
                 },
-            },
-            timeout=300,  # 5 minutes timeout for long transcripts
+                {"role": "user", "content": prompt},
+            ],
+            temperature=0.1,  # Very low for consistent output
+            top_p=0.9,
+            max_tokens=4096,
+            seed=42,  # For reproducibility
         )
-        response.raise_for_status()
 
         # Extract the generated text
-        result = response.json()
-        generated_text = result.get("response", "")
+        generated_text = response.choices[0].message.content
 
         # Try to parse JSON from the response
         # Sometimes LLMs add markdown formatting, so we clean it
@@ -108,11 +125,11 @@ def call_ollama(prompt: str) -> Dict[str, Any]:
         return niederschrift_data
 
     except json.JSONDecodeError as e:
-        logger.error(f"Failed to parse JSON from Ollama response: {e}")
+        logger.error(f"Failed to parse JSON from LLM response: {e}")
         logger.error(f"Response text: {generated_text[:500]}...")
         raise ValueError("Model did not return valid JSON")
-    except requests.exceptions.RequestException as e:
-        logger.error(f"Failed to call Ollama: {e}")
+    except Exception as e:
+        logger.error(f"Failed to call LLM: {e}")
         raise
 
 
