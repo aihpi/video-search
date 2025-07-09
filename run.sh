@@ -12,7 +12,7 @@ else
 fi
 
 # Start services in detached mode
-docker compose --profile $PROFILE up -d
+docker compose --profile $PROFILE up -d --build
 
 # Wait for Ollama to be ready
 echo "Waiting for Ollama to start..."
