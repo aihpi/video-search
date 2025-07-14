@@ -225,20 +225,29 @@ const TranscriptionForm = forwardRef<
         return;
       }
 
-      // Create object URL for video preview
+      // Clean up previous URLs
       if (videoObjectUrl) {
-        URL.revokeObjectURL(videoObjectUrl); // Clean up previous URL
+        URL.revokeObjectURL(videoObjectUrl);
       }
       if (videoPosterUrl) {
-        URL.revokeObjectURL(videoPosterUrl); // Clean up previous poster
+        URL.revokeObjectURL(videoPosterUrl);
       }
 
-      const objectUrl = URL.createObjectURL(file);
+      // Use FileReader for better Safari compatibility
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const dataUrl = reader.result as string;
+        setVideoObjectUrl(dataUrl);
+      };
+      reader.onerror = () => {
+        console.error("Failed to read file");
+        onError(new Error("Failed to read video file"));
+      };
+      reader.readAsDataURL(file);
 
       setVideoFile(file);
       setVideoUrl(file.name); // Show filename in URL field
       setVideoId(null); // Clear YouTube player
-      setVideoObjectUrl(objectUrl);
       onError(null); // Clear any previous errors
 
       // Generate thumbnail asynchronously
@@ -371,8 +380,8 @@ const TranscriptionForm = forwardRef<
                 style={{ maxHeight: "315px" }}
                 preload="metadata"
                 poster={videoPosterUrl || undefined}
+                src={videoObjectUrl}
               >
-                <source src={videoObjectUrl} type={videoFile.type} />
                 Your browser does not support the video tag.
               </video>
               <div className="mt-2 text-center">
