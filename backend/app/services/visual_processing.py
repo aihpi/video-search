@@ -48,12 +48,12 @@ class VisualProcessingService:
             else:
                 self._device = "cpu"
 
-            model_name = "google/siglip-base-patch16-384"
+            model_name = "google/siglip2-base-patch16-384"
             self._processor = AutoProcessor.from_pretrained(model_name)
             self._model = AutoModel.from_pretrained(model_name).to(self._device)
             self._model.eval()
 
-            logger.info(f"SigLIP model loaded successfully on {self._device}.")
+            logger.info(f"SigLIP2 model loaded successfully on {self._device}.")
 
     def extract_frames_for_segments(
         self,
@@ -165,14 +165,25 @@ class VisualProcessingService:
         return embeddings
 
     def generate_text_embedding(self, text: str) -> List[float]:
-        """Generate SigLIP embedding for a text query.
+        """Generate SigLIP2 embedding for a text query.
         This allows search over images using text queries.
         """
         self._load_model()
 
         with torch.no_grad():
-            # SigLIP was trained with padding="max_length" - this is crucial!
-            inputs = self._processor(text=text, padding="max_length", return_tensors="pt").to(self._device)
+            # SigLIP2 uses specific formatting and parameters
+            # Convert to lowercase as recommended
+            text_lower = text.lower()
+            # Use prompt template for better results
+            formatted_text = f"This is a photo of {text_lower}."
+            
+            # SigLIP2 requires padding="max_length" with max_length=64
+            inputs = self._processor(
+                text=formatted_text, 
+                padding="max_length", 
+                max_length=64,
+                return_tensors="pt"
+            ).to(self._device)
             outputs = self._model.get_text_features(**inputs)
 
             # Normalize embedding
