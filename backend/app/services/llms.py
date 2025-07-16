@@ -153,6 +153,16 @@ Remember: Start your response directly with "SUMMARY:" without any preamble."""
 
         response = response.strip()
 
+        # Clean up any thinking tags or meta-commentary
+        if "<think>" in response:
+            # Remove everything between <think> and </think>
+            response = re.sub(
+                r"<think>.*?</think>", "", response, flags=re.DOTALL
+            ).strip()
+
+        # Remove any leading/trailing whitespace or empty lines
+        response = response.strip()
+
         # If response contains SUMMARY:, extract from there onwards (ignoring any preceding text)
         summary_start = response.find("SUMMARY:")
         if summary_start != -1:

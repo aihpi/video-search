@@ -1,9 +1,16 @@
-export type SearchType = "keyword" | "semantic" | "llm";
+export type SearchType =
+  | "keyword"
+  | "semantic"
+  | "llm"
+  | "visual"
+  | "visual_semantic";
 
 export const SearchTypeNames: Record<SearchType, string> = {
   keyword: "Keyword Search",
   semantic: "Semantic Search",
   llm: "LLM Synthesis",
+  visual: "Visual Search",
+  visual_semantic: "Visual + Semantic Search",
 };
 
 export type QuestionRequest = {
@@ -20,6 +27,9 @@ export type SegmentResult = {
   text: string;
   transcriptId: string;
   relevanceScore: number | null;
+  frameTimestamp: number | null;
+  framePath: string | null;
+  searchType: SearchType | null;
 };
 
 export type LlmAnswer = {
@@ -48,7 +58,17 @@ export type LlmSearchResponse = BaseSearchResponse &
     searchType: "llm";
   };
 
+export type VisualSearchResponse = BaseSearchResponse & {
+  searchType: "visual";
+};
+
+export type VisualSemanticSearchResponse = BaseSearchResponse & {
+  searchType: "visual_semantic";
+};
+
 export type QuestionResponse =
   | KeywordSearchResponse
   | SemanticSearchResponse
-  | LlmSearchResponse;
+  | LlmSearchResponse
+  | VisualSearchResponse
+  | VisualSemanticSearchResponse;

@@ -8,7 +8,8 @@ class SearchType(str, Enum):
     KEYWORD = "keyword"
     SEMANTIC = "semantic"
     LLM = "llm"
-    MULTIMODAL = "multimodal"
+    VISUAL = "visual"
+    VISUAL_SEMANTIC = "visual_semantic"
 
 
 class QueryResult(CamelCaseModel):
@@ -18,6 +19,9 @@ class QueryResult(CamelCaseModel):
     text: str
     transcript_id: str
     relevance_score: float | None = None
+    frame_timestamp: float | None = None
+    frame_path: str | None = None
+    search_type: SearchType | None = None
 
 
 class QuestionRequest(CamelCaseModel):
@@ -49,4 +53,18 @@ class LLMSearchResponse(BaseSearchResponse):
     model_id: str
 
 
-QuestionResponse = KeywordSearchResponse | SemanticSearchResponse | LLMSearchResponse
+class VisualSearchResponse(BaseSearchResponse):
+    search_type: SearchType = SearchType.VISUAL
+
+
+class VisualSemanticSearchResponse(BaseSearchResponse):
+    search_type: SearchType = SearchType.VISUAL_SEMANTIC
+
+
+QuestionResponse = (
+    KeywordSearchResponse
+    | SemanticSearchResponse
+    | LLMSearchResponse
+    | VisualSearchResponse
+    | VisualSemanticSearchResponse
+)
