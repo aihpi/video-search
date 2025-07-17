@@ -26,6 +26,7 @@ from app.services.transcription import (
     process_video_from_url,
     process_video_from_file,
     cleanup_file,
+    cleanup_frames_directory,
 )
 from app.services.search import search_service
 from app.services.visual_processing import visual_processing_service
@@ -151,6 +152,9 @@ async def transcribe_video_url(
 
         # Add a background task to clean up the audio file after a delay of 1 hour
         background_tasks.add_task(cleanup_file, audio_path)
+        
+        # Add a background task to clean up frames directory after 2 hours
+        background_tasks.add_task(cleanup_frames_directory, id)
 
         response = TranscriptionResponse(
             id=id,
@@ -295,6 +299,9 @@ async def transcribe_video_file(
 
         # Add a background task to clean up the audio file after a delay
         background_tasks.add_task(cleanup_file, audio_path)
+        
+        # Add a background task to clean up frames directory after 2 hours
+        background_tasks.add_task(cleanup_frames_directory, id)
 
         response = TranscriptionResponse(
             id=id,

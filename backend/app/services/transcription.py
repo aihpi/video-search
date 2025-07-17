@@ -1,5 +1,6 @@
 import os
 import logging
+import shutil
 import subprocess
 import asyncio
 import torch
@@ -196,5 +197,24 @@ async def cleanup_file(file_path: str, delay: int = 3600) -> None:
             logger.warning(f"File not found for deletion: {file_path}")
     except Exception as e:
         logger.error(f"Error deleting file: {e}")
+        # Don't raise the exception in a background task as it would be unhandled
+        # Just log it instead
+
+
+async def cleanup_frames_directory(video_id: str, delay: int = 7200) -> None:
+    """
+    Asynchronously delete a frames directory after a delay (default = 2 hours).
+    """
+    try:
+        await asyncio.sleep(delay)
+        frames_dir = os.path.join("data", "frames", video_id)
+
+        if os.path.exists(frames_dir):
+            shutil.rmtree(frames_dir)
+            logger.info(f"Deleted frames directory: {frames_dir}")
+        else:
+            logger.warning(f"Frames directory not found for deletion: {frames_dir}")
+    except Exception as e:
+        logger.error(f"Error deleting frames directory: {e}")
         # Don't raise the exception in a background task as it would be unhandled
         # Just log it instead
