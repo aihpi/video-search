@@ -35,11 +35,16 @@ const TranscriptionForm = forwardRef<
   const [model, setModel] = useState<WhisperModelType>("small");
   const [isLoading, setIsLoading] = useState(false);
   const youtubePlayerRef = useRef<YouTubePlayerHandle>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
 
   useImperativeHandle(ref, () => ({
     seekToTime: (seconds: number) => {
-      if (youtubePlayerRef.current) {
+      if (youtubePlayerRef.current && videoId) {
+        // YouTube video
         youtubePlayerRef.current.seekTo(seconds);
+      } else if (videoRef.current && videoFile) {
+        // Local video file
+        videoRef.current.currentTime = seconds;
       }
     },
   }));
@@ -375,6 +380,7 @@ const TranscriptionForm = forwardRef<
             // Local video player
             <div className="p-4">
               <video
+                ref={videoRef}
                 controls
                 className="w-full h-full rounded-md"
                 style={{ maxHeight: "315px" }}
