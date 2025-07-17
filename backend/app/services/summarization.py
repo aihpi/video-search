@@ -41,6 +41,13 @@ def create_prompt(transcript_text: str) -> str:
 
     return f"""You are an expert at summarizing video transcripts. Your task is to create a clear, comprehensive summary that captures the main points, key insights, and important details from the video.
 
+CRITICAL LANGUAGE REQUIREMENT:
+- You MUST write the summary in the SAME LANGUAGE as the transcript
+- If the transcript is in German, write the summary in German
+- If the transcript is in English, write the summary in English
+- If the transcript is in any other language, write the summary in that language
+- Do NOT translate the content to a different language
+
 Please analyze the following video transcript and provide a well-structured summary that:
 1. Identifies the main topic or theme
 2. Highlights key points and important information
@@ -53,8 +60,9 @@ IMPORTANT OUTPUT REQUIREMENTS:
 - Do NOT include "Summary:" or "SUMMARY:" at the beginning
 - Do NOT use bullet points or numbered lists
 - Write in paragraph form with clear transitions between ideas
-- Start directly with the content (e.g., "This video discusses...")
+- Start directly with the content
 - Output ONLY the final summary text, nothing else
+- Remember: Use the SAME LANGUAGE as the transcript
 
 TRANSCRIPT:
 {transcript_text}"""
@@ -96,7 +104,7 @@ def call_llm(prompt: str) -> str:
             messages=[
                 {
                     "role": "system",
-                    "content": "You are a helpful assistant that creates clear, concise summaries of video transcripts. Output only the requested summary content.",
+                    "content": "You are a helpful assistant that creates clear, concise summaries of video transcripts. You always write summaries in the same language as the transcript you are summarizing. Output only the requested summary content.",
                 },
                 {"role": "user", "content": prompt},
             ],

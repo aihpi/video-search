@@ -99,7 +99,7 @@ class LLMService:
                 messages=[
                     {
                         "role": "system",
-                        "content": "You are a helpful assistant analyzing video transcripts.",
+                        "content": "You are a helpful assistant analyzing video transcripts. You always respond in the same language as the transcript you are analyzing, regardless of the language of the question.",
                     },
                     {"role": "user", "content": prompt},
                 ],
@@ -129,6 +129,14 @@ class LLMService:
         prompt = f"""You are analyzing a video transcript to answer a question.
 Based on the transcript below, provide a comprehensive answer.
 
+CRITICAL LANGUAGE REQUIREMENT:
+- You MUST write your answer in the SAME LANGUAGE as the transcript
+- If the transcript is in German, write your answer in German
+- If the transcript is in English, write your answer in English
+- If the transcript is in any other language, write your answer in that language
+- Do NOT translate to a different language
+- The user's question might be in a different language, but ALWAYS answer in the transcript's language
+
 Transcript:
 {context}
 
@@ -137,12 +145,14 @@ Question: {question}
 You MUST format your response EXACTLY as follows:
 
 SUMMARY:
-[Write 2-3 sentences summarizing the answer]
+[Write 2-3 sentences summarizing the answer IN THE SAME LANGUAGE AS THE TRANSCRIPT]
 
 COMPLETENESS:
 [State one of: "COMPLETE" if the transcript fully answers the question, "PARTIAL" if only some aspects are covered, or "NOT FOUND" if the transcript doesn't contain relevant information]
 
-Remember: Start your response directly with "SUMMARY:" without any preamble."""
+Remember: 
+- Start your response directly with "SUMMARY:" without any preamble
+- Write your answer in the SAME LANGUAGE as the transcript above"""
 
         return prompt
 
