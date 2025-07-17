@@ -128,7 +128,7 @@ class SearchService:
             for segment_id, frames in frame_data.items():
                 for i, frame in enumerate(frames):
                     # Create a unique ID for each frame using index to avoid duplicates
-                    frame_id = f"{segment_id}_frame_{frame["timestamp"]:.2f}_{i}"
+                    frame_id = f"{segment_id}_frame_{frame['timestamp']:.2f}_{i}"
 
                     all_embeddings.append(frame["embedding"])
                     all_metadatas.append(
