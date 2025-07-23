@@ -62,15 +62,33 @@ class VisualProcessingService:
         frames_per_second: float = 0.5,  # Default: extract 1 frame every 2 seconds
     ) -> Dict[str, List[Dict[str, Any]]]:
         """Extract frames from video for given transcript segments."""
+        
+        logger.info(f"Starting frame extraction from video: {video_path}")
+        logger.info(f"Number of segments to process: {len(segments)}")
+        
+        # Check if video file exists
+        if not os.path.exists(video_path):
+            logger.error(f"Video file not found: {video_path}")
+            return {}
 
         cap = cv2.VideoCapture(video_path)
+        
+        # Check if video opened successfully
+        if not cap.isOpened():
+            logger.error(f"Failed to open video: {video_path}")
+            return {}
+        
         fps = cap.get(cv2.CAP_PROP_FPS)
+        total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        logger.info(f"Video FPS: {fps}, Total frames: {total_frames}")
 
         video_id = Path(video_path).stem
         video_frame_dir = self._frame_output_dir / video_id
-        video_frame_dir.mkdir(exist_ok=True)
+        video_frame_dir.mkdir(exist_ok=True, parents=True)
+        logger.info(f"Frame output directory: {video_frame_dir}")
 
         frames_by_segment = {}
+        total_frames_extracted = 0
         try:
 
             for segment in segments:
@@ -93,15 +111,21 @@ class VisualProcessingService:
                         # Save the frame to disk
                         frame_filename = f"frame_{current_time:.2f}.jpg"
                         frame_path = video_frame_dir / frame_filename
-                        cv2.imwrite(str(frame_path), frame)
-
-                        segment_frames.append(
-                            {
-                                "timestamp": current_time,
-                                "path": str(frame_path),
-                                "segment_id": segment.id,
-                            }
-                        )
+                        success = cv2.imwrite(str(frame_path), frame)
+                        
+                        if success:
+                            segment_frames.append(
+                                {
+                                    "timestamp": current_time,
+                                    "path": str(frame_path),
+                                    "segment_id": segment.id,
+                                }
+                            )
+                            total_frames_extracted += 1
+                        else:
+                            logger.error(f"Failed to save frame at {current_time:.2f}s to {frame_path}")
+                    else:
+                        logger.warning(f"Failed to read frame at {current_time:.2f}s (frame {frame_number})")
 
                     current_time += interval
 
@@ -132,6 +156,8 @@ class VisualProcessingService:
 
         finally:
             cap.release()
+            logger.info(f"Frame extraction complete. Total frames extracted: {total_frames_extracted}")
+            logger.info(f"Segments with frames: {len(frames_by_segment)}")
 
         return frames_by_segment
 
