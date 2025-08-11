@@ -3,7 +3,7 @@ services:
   ollama-cpu:
     image: ollama/ollama
     ports:
-      - "11434:11434"
+      - "11437:11434"
     volumes:
       - ollama_data:/root/.ollama
     profiles:
@@ -14,7 +14,7 @@ services:
   ollama-gpu:
     image: ollama/ollama
     ports:
-      - "11434:11434"
+      - "11437:11434"
     volumes:
       - ollama_data:/root/.ollama
     runtime: nvidia

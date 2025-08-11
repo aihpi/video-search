@@ -213,7 +213,7 @@ The application works with sensible defaults. You only need a `.env` file if you
 
 **Default Configuration (no .env needed):**
 
-- LLM Backend: Ollama on http://localhost:11434
+- LLM Backend: Ollama on http://localhost:11437
 - Default Model: qwen3:8b
 - Embedding Model: paraphrase-multilingual-MiniLM-L12-v2
 - Database: ./chroma_db

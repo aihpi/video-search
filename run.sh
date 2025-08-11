@@ -16,7 +16,7 @@ docker compose --profile $PROFILE up -d --build
 
 # Wait for Ollama to be ready
 echo "Waiting for Ollama to start..."
-until curl -s http://localhost:11434/api/tags > /dev/null 2>&1; do
+until curl -s http://localhost:11437/api/tags > /dev/null 2>&1; do
   echo -n "."
   sleep 2
 done

@@ -60,7 +60,7 @@ class LLMService:
         self._backend = os.getenv("LLM_BACKEND", "ollama").lower()
 
         if self._backend == "ollama":
-            self._base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434/v1")
+            self._base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11437/v1")
             self._api_key = "ollama"  # Ollama doesn't require API key
             self._model_id = os.getenv("LLM_MODEL", "qwen3:8b")
             logger.info(
