@@ -68,12 +68,13 @@ def download_video(video_url: str, output_path: str) -> None:
     try:
         logger.info(f"Downloading video from URL: {video_url}")
         # Work around YouTube's recent API restrictions by downloading video+audio separately and merging
-        # Format: best video (≤720p) + best audio, fallback to best ≤720p, final fallback to any best
+        # Format: prefer H.264 or VP9 codecs (exclude AV1 which has compatibility issues)
+        # Priority: H.264 ≤720p, then VP9 ≤720p, then any non-AV1 ≤720p, then fallback to best
         result = subprocess.run(
             [
                 "yt-dlp",
                 "-f",
-                "bestvideo[height<=720]+bestaudio/best[height<=720]/best",
+                "bestvideo[height<=720][vcodec^=avc]+bestaudio/bestvideo[height<=720][vcodec^=vp9]+bestaudio/bestvideo[height<=720][vcodec!=av01]+bestaudio/best[height<=720]/best",
                 "-o",
                 output_path,
                 video_url,
